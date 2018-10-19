@@ -1,4 +1,4 @@
-# Polychrony_Sandbox
+# Binding_Network
 
 C++ code for creating a simple, hierarchical polychronous neural network to investigate the emergence of feature binding. 
 

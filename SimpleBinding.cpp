@@ -28,7 +28,7 @@ int main (int argc, char *argv[]){
 
 
   // Choose an input neuron type
-  GeneratorInputSpikingNeurons* generator_input_neurons = new GeneratorInputSpikingNeurons();
+  PatternedPoissonInputSpikingNeurons* patterned_poisson_input_neurons = new PatternedPoissonInputSpikingNeurons();
 
   // Choose your neuron type
   LIFSpikingNeurons* lif_spiking_neurons = new LIFSpikingNeurons();
@@ -37,7 +37,7 @@ int main (int argc, char *argv[]){
   ConductanceSpikingSynapses * conductance_spiking_synapses = new ConductanceSpikingSynapses();
 
   // Allocate your chosen components to the simulator
-  ExampleModel->input_spiking_neurons = generator_input_neurons;
+  ExampleModel->input_spiking_neurons = patterned_poisson_input_neurons;
   ExampleModel->spiking_neurons = lif_spiking_neurons;
   ExampleModel->spiking_synapses = conductance_spiking_synapses;
 
@@ -51,7 +51,7 @@ int main (int argc, char *argv[]){
   WDSTDP_PARAMS->alpha = 2.02;
   WDSTDP_PARAMS->w_max = 0.3*powf(10.0, -3);
 
-  WeightDependentSTDPPlasticity * weightdependent_stdp = new WeightDependentSTDPPlasticity((SpikingSynapses *) conductance_spiking_synapses, (SpikingNeurons *) lif_spiking_neurons, (SpikingNeurons *) generator_input_neurons, (stdp_plasticity_parameters_struct *) WDSTDP_PARAMS);  
+  WeightDependentSTDPPlasticity * weightdependent_stdp = new WeightDependentSTDPPlasticity((SpikingSynapses *) conductance_spiking_synapses, (SpikingNeurons *) lif_spiking_neurons, (SpikingNeurons *) patterned_poisson_input_neurons, (stdp_plasticity_parameters_struct *) WDSTDP_PARAMS);  
   
   ExampleModel->AddPlasticityRule(weightdependent_stdp);
 
@@ -61,8 +61,8 @@ int main (int argc, char *argv[]){
   SpikingActivityMonitor* spike_monitor_main = new SpikingActivityMonitor(lif_spiking_neurons);
   ExampleModel->AddActivityMonitor(spike_monitor_main);
 
-  // Add activity monitor for generator neurons
-  SpikingActivityMonitor* spike_monitor_input = new SpikingActivityMonitor(generator_input_neurons);
+  // Add activity monitor for poisson input neurons
+  SpikingActivityMonitor* spike_monitor_input = new SpikingActivityMonitor(patterned_poisson_input_neurons);
   ExampleModel->AddActivityMonitor(spike_monitor_input);
 
 
@@ -76,7 +76,7 @@ int main (int argc, char *argv[]){
 
   // SETTING UP INPUT NEURONS
   // Creating an input neuron parameter structure
-  generator_input_spiking_neuron_parameters_struct* input_neuron_params = new generator_input_spiking_neuron_parameters_struct();
+  patterned_poisson_input_spiking_neuron_parameters_struct* input_neuron_params = new patterned_poisson_input_spiking_neuron_parameters_struct();
   // Setting the dimensions of the input neuron layer
   input_neuron_params->group_shape[0] = 1;    // x-dimension of the input neuron layer
   input_neuron_params->group_shape[1] = 10;   // y-dimension of the input neuron layer
@@ -171,19 +171,15 @@ int main (int argc, char *argv[]){
 
 
   /*
-      ADD INPUT STIMULI TO THE GENERATOR NEURONS CLASS
+      ADD INPUT STIMULI TO THE PATTERNED POISSON NEURONS CLASS
   */
   // First stimulus is the 'ascending' pattern; pattern takes place over 10 ms.
-  int s1_num_spikes = 10;
-  int s1_neuron_ids[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  float s1_spike_times[10] = {0.001f, 0.002f, 0.003f, 0.004f, 0.005f, 0.006f, 0.007f, 0.008f, 0.009f, 0.01f};
+  float s1_poisson_rates[10] = {10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f};
   // Adding this stimulus to the input neurons
-  int first_stimulus = generator_input_neurons->add_stimulus(s1_num_spikes, s1_neuron_ids, s1_spike_times);
+  int first_stimulus = patterned_poisson_input_neurons->add_stimulus(s1_poisson_rates, 10);
   // Creating a second stimulus (descending pattern)
-  int s2_num_spikes = 10;
-  int s2_neuron_ids[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  float s2_spike_times[10] = {0.01f, 0.009f, 0.008f, 0.007f, 0.006f, 0.005f, 0.004f, 0.003f, 0.002f, 0.001f};
-  int second_stimulus = generator_input_neurons->add_stimulus(s2_num_spikes, s2_neuron_ids, s2_spike_times);
+ float s2_poisson_rates[10] = {10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+  int second_stimulus = patterned_poisson_input_neurons->add_stimulus(s2_poisson_rates, 10);
   
 
   /*
@@ -195,7 +191,7 @@ int main (int argc, char *argv[]){
   float simtime = 0.03f; //This should be long enough to allow any recursive signalling to finish propagating
 
   // Very first 'loop' is executed outside, such that stimulus_onset_adjustment is incremented appropriately, without repeating a logical operator
-  generator_input_neurons->select_stimulus(first_stimulus);
+  patterned_poisson_input_neurons->select_stimulus(first_stimulus);
   ExampleModel->run(simtime);
 
   // Loop through a series of stimulus presentations, alternating the chosen stimulus in each example; note due to the above, loop begins at 1
@@ -203,13 +199,13 @@ int main (int argc, char *argv[]){
     ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
     //On even loops, present stimulus 1
     if (ii%2 == 0) {
-      generator_input_neurons->stimulus_onset_adjustment += simtime;
-      generator_input_neurons->select_stimulus(first_stimulus);
+      //NB stimulus adjusment is not relevant for Poisson input: patterned_poisson_input_neurons->stimulus_onset_adjustment += simtime;
+      patterned_poisson_input_neurons->select_stimulus(first_stimulus);
       ExampleModel->run(simtime);
     }
     else {
-      generator_input_neurons->stimulus_onset_adjustment += simtime; //simtime ensures the stimulus begins at the start of the new simulation run, rather than e.g. not running because the spike times for each neuron are in the past
-      generator_input_neurons->select_stimulus(second_stimulus);
+      //patterned_poisson_input_neurons->stimulus_onset_adjustment += simtime; //simtime ensures the stimulus begins at the start of the new simulation run, rather than e.g. not running because the spike times for each neuron are in the past
+      patterned_poisson_input_neurons->select_stimulus(second_stimulus);
       ExampleModel->run(simtime);
     }
 

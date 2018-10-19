@@ -79,7 +79,7 @@ int main (int argc, char *argv[]){
   patterned_poisson_input_spiking_neuron_parameters_struct* input_neuron_params = new patterned_poisson_input_spiking_neuron_parameters_struct();
   // Setting the dimensions of the input neuron layer
   input_neuron_params->group_shape[0] = 1;    // x-dimension of the input neuron layer
-  input_neuron_params->group_shape[1] = 10;   // y-dimension of the input neuron layer
+  input_neuron_params->group_shape[1] = 27;   // y-dimension of the input neuron layer
   // Create a group of input neurons. This function returns the ID of the input neuron group
   int input_layer_ID = ExampleModel->AddInputNeuronGroup(input_neuron_params);
 
@@ -88,7 +88,7 @@ int main (int argc, char *argv[]){
   // 1 x 100 Layer
   lif_spiking_neuron_parameters_struct * excitatory_population_params = new lif_spiking_neuron_parameters_struct();
   excitatory_population_params->group_shape[0] = 1;
-  excitatory_population_params->group_shape[1] = 80;
+  excitatory_population_params->group_shape[1] = 27;
   excitatory_population_params->resting_potential_v0 = -0.074f;
   excitatory_population_params->threshold_for_action_potential_spike = -0.053f;
   excitatory_population_params->somatic_capacitance_Cm = 500.0*pow(10, -12);
@@ -96,7 +96,7 @@ int main (int argc, char *argv[]){
 
   lif_spiking_neuron_parameters_struct * inhibitory_population_params = new lif_spiking_neuron_parameters_struct();
   inhibitory_population_params->group_shape[0] = 1;
-  inhibitory_population_params->group_shape[1] = 20;
+  inhibitory_population_params->group_shape[1] = 6;
   inhibitory_population_params->resting_potential_v0 = -0.082f;
   inhibitory_population_params->threshold_for_action_potential_spike = -0.053f;
   inhibitory_population_params->somatic_capacitance_Cm = 214.0*pow(10, -12);
@@ -109,6 +109,8 @@ int main (int argc, char *argv[]){
   // *** Create additional layers - NB that is shares the same properties as the first layer
   int second_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
   int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+  int third_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  int third_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
   // SETTING UP SYNAPSES
   // Creating a synapses parameter structure for connections from the input neurons to the excitatory neurons
@@ -185,23 +187,28 @@ int main (int argc, char *argv[]){
   ExampleModel->AddSynapseGroup(first_inhibitory_neuron_layer_ID, first_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
   ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, first_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
-  // *** Add synapses relevant to the second layer
+  // *** Add synapses relevant to the second and third layers
   ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
   ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
   ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
   ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+
+  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, lower_to_upper_parameters);
+  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  ExampleModel->AddSynapseGroup(third_inhibitory_neuron_layer_ID, third_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
 
   /*
       ADD INPUT STIMULI TO THE PATTERNED POISSON NEURONS CLASS
   */
   // First stimulus is the 'ascending' pattern; pattern takes place over 10 ms.
-  float s1_poisson_rates[10] = {10.0f, 5.0f, 10.0f, 5.0f, 10.0f, 5.0f, 10.0f, 5.0f, 10.0f, 5.0f};
+  float s1_poisson_rates[27] = {10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f};
   // Adding this stimulus to the input neurons
-  int first_stimulus = patterned_poisson_input_neurons->add_stimulus(s1_poisson_rates, 10);
+  int first_stimulus = patterned_poisson_input_neurons->add_stimulus(s1_poisson_rates, 27);
   // Creating a second stimulus (descending pattern)
- float s2_poisson_rates[10] = {10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 5.0f, 5.0f, 5.0f, 5.0f, 5.0f};
-  int second_stimulus = patterned_poisson_input_neurons->add_stimulus(s2_poisson_rates, 10);
+ float s2_poisson_rates[27] = {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 15.0f, 15.0f, 15.0f, 15.0f};
+  int second_stimulus = patterned_poisson_input_neurons->add_stimulus(s2_poisson_rates, 27);
   
 
   /*

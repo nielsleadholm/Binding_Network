@@ -103,9 +103,12 @@ int main (int argc, char *argv[]){
   inhibitory_population_params->somatic_leakage_conductance_g0 = 18.0*pow(10, -9);
 
   // Create populations of excitatory and inhibitory neurons
-  int excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
-  int inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+  int first_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  int first_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
+  // *** Create additional layers - NB that is shares the same properties as the first layer
+  int second_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
   // SETTING UP SYNAPSES
   // Creating a synapses parameter structure for connections from the input neurons to the excitatory neurons
@@ -129,7 +132,7 @@ int main (int argc, char *argv[]){
   //input_to_excitatory_parameters->plasticity_vec.push_back(STDP_RULE);
 
 
-  // Creating a set of synapse parameters for connections from the excitatory neurons to the inhibitory neurons
+  // Creating a set of synapse parameters for connections from the excitatory neurons to the inhibitory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * excitatory_to_inhibitory_parameters = new conductance_spiking_synapse_parameters_struct();
   excitatory_to_inhibitory_parameters->weight_range[0] = 10.0f;
   excitatory_to_inhibitory_parameters->weight_range[1] = 10.0f;
@@ -137,9 +140,9 @@ int main (int argc, char *argv[]){
   excitatory_to_inhibitory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
   excitatory_to_inhibitory_parameters->delay_range[1] = 20.0*timestep;
   excitatory_to_inhibitory_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  excitatory_to_inhibitory_parameters->random_connectivity_probability = 0.5; //connects neurons with 10% probability 
+  excitatory_to_inhibitory_parameters->random_connectivity_probability = 0.5; //connects neurons with specified probability 
 
-  // Creating a set of synapse parameters from the inhibitory neurons to the excitatory neurons
+  // Creating a set of synapse parameters from the inhibitory neurons to the excitatory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * inhibitory_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
   inhibitory_to_excitatory_parameters->weight_range[0] = -5.0f;
   inhibitory_to_excitatory_parameters->weight_range[1] = -2.5f;
@@ -148,37 +151,56 @@ int main (int argc, char *argv[]){
   inhibitory_to_excitatory_parameters->delay_range[1] = 20.0*timestep;
   inhibitory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ALL_TO_ALL;
   
-  // Creating a set of synapse parameters for connections from the excitatory neurons back to the excitatory neurons
+  // Creating a set of synapse parameters for connections from the excitatory neurons back to the excitatory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * excitatory_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
   excitatory_to_excitatory_parameters->weight_range[0] = 10.0f;
   excitatory_to_excitatory_parameters->weight_range[1] = 10.0f;
   excitatory_to_excitatory_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_excitatory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
   excitatory_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
-  excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  excitatory_to_excitatory_parameters->random_connectivity_probability = 0.8; //connects neurons with 10% probability
+  excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ALL_TO_ALL;
+  //excitatory_to_excitatory_parameters->random_connectivity_probability = 0.8; //connects neurons with specified probability
 
-  // *** Add plasticity to excitatory to excitatory synapses
+  // Creating a set of synapse parameters for connections from the excitatory neurons *in a lower layer to the layer above*
+  conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
+  lower_to_upper_parameters->weight_range[0] = 10.0f;
+  lower_to_upper_parameters->weight_range[1] = 10.0f;
+  lower_to_upper_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
+  lower_to_upper_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
+  lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
+  lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
+  lower_to_upper_parameters->random_connectivity_probability = 0.8; //connects neurons with specified probability
+
+
+  // *** Add plasticity to excitatory to excitatory synapses (w/in layers), and the excitatory connections projecting up layers
   excitatory_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
+  lower_to_upper_parameters->plasticity_vec.push_back(weightdependent_stdp);
+
 
   // CREATING SYNAPSES
   // When creating synapses, the ids of the presynaptic and postsynaptic populations are all that are required
   // Note: Input neuron populations cannot be post-synaptic on any synapse
-  ExampleModel->AddSynapseGroup(input_layer_ID, excitatory_neuron_layer_ID, input_to_excitatory_parameters);
-  ExampleModel->AddSynapseGroup(excitatory_neuron_layer_ID, inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
-  ExampleModel->AddSynapseGroup(inhibitory_neuron_layer_ID, excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
-  ExampleModel->AddSynapseGroup(excitatory_neuron_layer_ID, excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(input_layer_ID, first_excitatory_neuron_layer_ID, input_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, first_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  ExampleModel->AddSynapseGroup(first_inhibitory_neuron_layer_ID, first_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, first_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+
+  // *** Add synapses relevant to the second layer
+  ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
+  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
 
   /*
       ADD INPUT STIMULI TO THE PATTERNED POISSON NEURONS CLASS
   */
   // First stimulus is the 'ascending' pattern; pattern takes place over 10 ms.
-  float s1_poisson_rates[10] = {10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f};
+  float s1_poisson_rates[10] = {10.0f, 5.0f, 10.0f, 5.0f, 10.0f, 5.0f, 10.0f, 5.0f, 10.0f, 5.0f};
   // Adding this stimulus to the input neurons
   int first_stimulus = patterned_poisson_input_neurons->add_stimulus(s1_poisson_rates, 10);
   // Creating a second stimulus (descending pattern)
- float s2_poisson_rates[10] = {10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+ float s2_poisson_rates[10] = {10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 5.0f, 5.0f, 5.0f, 5.0f, 5.0f};
   int second_stimulus = patterned_poisson_input_neurons->add_stimulus(s2_poisson_rates, 10);
   
 
@@ -188,7 +210,7 @@ int main (int argc, char *argv[]){
 
   // The only argument to run is the number of seconds
   ExampleModel->finalise_model();
-  float simtime = 0.03f; //This should be long enough to allow any recursive signalling to finish propagating
+  float simtime = 0.05f; //This should be long enough to allow any recursive signalling to finish propagating
 
   // Very first 'loop' is executed outside, such that stimulus_onset_adjustment is incremented appropriately, without repeating a logical operator
   patterned_poisson_input_neurons->select_stimulus(first_stimulus);

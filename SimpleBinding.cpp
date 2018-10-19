@@ -120,18 +120,13 @@ int main (int argc, char *argv[]){
   input_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   input_to_excitatory_parameters->delay_range[0] = 10.0*timestep;   //Delays range from 1 to 10 ms for excitatory connectivity
   input_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
+  input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  input_to_excitatory_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
+  input_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
+  input_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
 
   // *** Add plasticity to input synapses
   input_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
-
-  // The connectivity types for synapses include:
-    // CONNECTIVITY_TYPE_ALL_TO_ALL
-    // CONNECTIVITY_TYPE_ONE_TO_ONE
-    // CONNECTIVITY_TYPE_RANDOM
-    // CONNECTIVITY_TYPE_PAIRWISE
-  input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  input_to_excitatory_parameters->random_connectivity_probability = 0.8;
-  //input_to_excitatory_parameters->plasticity_vec.push_back(STDP_RULE);
 
 
   // Creating a set of synapse parameters for connections from the excitatory neurons to the inhibitory neurons *within a layer*
@@ -141,8 +136,10 @@ int main (int argc, char *argv[]){
   excitatory_to_inhibitory_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_inhibitory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
   excitatory_to_inhibitory_parameters->delay_range[1] = 20.0*timestep;
-  excitatory_to_inhibitory_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  excitatory_to_inhibitory_parameters->random_connectivity_probability = 0.5; //connects neurons with specified probability 
+  excitatory_to_inhibitory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  excitatory_to_inhibitory_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
+  excitatory_to_inhibitory_parameters->max_number_of_connections_per_pair = 5;
+  excitatory_to_inhibitory_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
 
   // Creating a set of synapse parameters from the inhibitory neurons to the excitatory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * inhibitory_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
@@ -160,8 +157,10 @@ int main (int argc, char *argv[]){
   excitatory_to_excitatory_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_excitatory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
   excitatory_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
-  excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ALL_TO_ALL;
-  //excitatory_to_excitatory_parameters->random_connectivity_probability = 0.8; //connects neurons with specified probability
+  excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  excitatory_to_excitatory_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
+  excitatory_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
+  excitatory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
 
   // Creating a set of synapse parameters for connections from the excitatory neurons *in a lower layer to the layer above*
   conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
@@ -170,8 +169,10 @@ int main (int argc, char *argv[]){
   lower_to_upper_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
   lower_to_upper_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
   lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
-  lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  lower_to_upper_parameters->random_connectivity_probability = 0.8; //connects neurons with specified probability
+  lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  lower_to_upper_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
+  lower_to_upper_parameters->max_number_of_connections_per_pair = 5;
+  lower_to_upper_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
 
 
   // *** Add plasticity to excitatory to excitatory synapses (w/in layers), and the excitatory connections projecting up layers

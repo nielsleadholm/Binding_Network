@@ -1,5 +1,7 @@
 
 #include "Spike/Spike.hpp"
+#include <array>
+#include <iostream>
 
 // The function which will autorun when the executable is created
 int main (int argc, char *argv[]){
@@ -78,7 +80,7 @@ int main (int argc, char *argv[]){
   // Creating an input neuron parameter structure
   patterned_poisson_input_spiking_neuron_parameters_struct* input_neuron_params = new patterned_poisson_input_spiking_neuron_parameters_struct();
   // Setting the dimensions of the input neuron layer
-  input_neuron_params->group_shape[0] = 1;    // x-dimension of the input neuron layer
+  input_neuron_params->group_shape[0] = 27;    // x-dimension of the input neuron layer
   input_neuron_params->group_shape[1] = 27;   // y-dimension of the input neuron layer
   // Create a group of input neurons. This function returns the ID of the input neuron group
   int input_layer_ID = ExampleModel->AddInputNeuronGroup(input_neuron_params);
@@ -87,7 +89,7 @@ int main (int argc, char *argv[]){
   // Creating an LIF parameter structure for an excitatory neuron population and an inhibitory
   // 1 x 100 Layer
   lif_spiking_neuron_parameters_struct * excitatory_population_params = new lif_spiking_neuron_parameters_struct();
-  excitatory_population_params->group_shape[0] = 1;
+  excitatory_population_params->group_shape[0] = 27;
   excitatory_population_params->group_shape[1] = 27;
   excitatory_population_params->resting_potential_v0 = -0.074f;
   excitatory_population_params->threshold_for_action_potential_spike = -0.053f;
@@ -95,8 +97,8 @@ int main (int argc, char *argv[]){
   excitatory_population_params->somatic_leakage_conductance_g0 = 25.0*pow(10, -9);
 
   lif_spiking_neuron_parameters_struct * inhibitory_population_params = new lif_spiking_neuron_parameters_struct();
-  inhibitory_population_params->group_shape[0] = 1;
-  inhibitory_population_params->group_shape[1] = 6;
+  inhibitory_population_params->group_shape[0] = 12;
+  inhibitory_population_params->group_shape[1] = 12;
   inhibitory_population_params->resting_potential_v0 = -0.082f;
   inhibitory_population_params->threshold_for_action_potential_spike = -0.053f;
   inhibitory_population_params->somatic_capacitance_Cm = 214.0*pow(10, -12);
@@ -203,6 +205,23 @@ int main (int argc, char *argv[]){
   /*
       ADD INPUT STIMULI TO THE PATTERNED POISSON NEURONS CLASS
   */
+
+  //Initialize array for background inputs; note that althought it is a 2D input in the model, this is represented in Spike as a 1D array, n*n long
+  int total_input_size = (27*27);
+  float background_rates[total_input_size];
+  
+  //Loop over background inputs to set all values to a homogenous background rate
+  for (int ii = 0; ii < total_input_size; ii++){
+        background_rates[ii] = 5.0f;  
+  }
+
+  //std::array<float, {27, 27}> s1_poisson_rates = backround_rates;
+  //std::array<float, {27, 27}> s2_poisson_rates = backround_rates;
+
+  int first_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
+  int second_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
+
+  /*
   // First stimulus is the 'ascending' pattern; pattern takes place over 10 ms.
   float s1_poisson_rates[27] = {10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f};
   // Adding this stimulus to the input neurons
@@ -210,12 +229,12 @@ int main (int argc, char *argv[]){
   // Creating a second stimulus (descending pattern)
  float s2_poisson_rates[27] = {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 15.0f, 15.0f, 15.0f, 15.0f};
   int second_stimulus = patterned_poisson_input_neurons->add_stimulus(s2_poisson_rates, 27);
-  
+  */
 
   /*
       RUN THE SIMULATION
   */
-
+  
   // The only argument to run is the number of seconds
   ExampleModel->finalise_model();
   float simtime = 0.05f; //This should be long enough to allow any recursive signalling to finish propagating

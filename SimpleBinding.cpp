@@ -20,6 +20,11 @@ int main (int argc, char *argv[]){
     and as such memory *de*-allocation is critical in order to prevent a memory leak/'garbage' building up
   */
 
+  // Initialize model parameters
+  int x_dim = 32;
+  int y_dim = 32;
+  int num_images = 4; 
+  int baseline_firing_rate = 15;
   // Set up the simulator with a timestep at which the neuron, synapse and STDP properties will be calculated 
   float timestep = 0.0001;  // In seconds
   ExampleModel->SetTimestep(timestep);
@@ -58,7 +63,7 @@ int main (int argc, char *argv[]){
   ExampleModel->AddPlasticityRule(weightdependent_stdp);
 
   /*
-      ADD ANY ACTIVITY MONITORS OR PLASTICITY RULES YOU WISH FOR 
+      ADD ANY ACTIVITY MONITORS OR PLASTICITY RULES YOU WISH 
   */
   SpikingActivityMonitor* spike_monitor_main = new SpikingActivityMonitor(lif_spiking_neurons);
   ExampleModel->AddActivityMonitor(spike_monitor_main);
@@ -70,7 +75,6 @@ int main (int argc, char *argv[]){
 
   /*
       SETUP PROPERTIES AND CREATE NETWORK:
-    
     Note: 
     All Neuron, Synapse and STDP types have associated parameters structures.
     These structures are defined in the header file for that class and allow us to set properties.
@@ -80,8 +84,8 @@ int main (int argc, char *argv[]){
   // Creating an input neuron parameter structure
   patterned_poisson_input_spiking_neuron_parameters_struct* input_neuron_params = new patterned_poisson_input_spiking_neuron_parameters_struct();
   // Setting the dimensions of the input neuron layer
-  input_neuron_params->group_shape[0] = 27;    // x-dimension of the input neuron layer
-  input_neuron_params->group_shape[1] = 27;   // y-dimension of the input neuron layer
+  input_neuron_params->group_shape[0] = x_dim;    // x-dimension of the input neuron layer
+  input_neuron_params->group_shape[1] = y_dim;   // y-dimension of the input neuron layer
   // Create a group of input neurons. This function returns the ID of the input neuron group
   int input_layer_ID = ExampleModel->AddInputNeuronGroup(input_neuron_params);
 
@@ -89,8 +93,8 @@ int main (int argc, char *argv[]){
   // Creating an LIF parameter structure for an excitatory neuron population and an inhibitory
   // 1 x 100 Layer
   lif_spiking_neuron_parameters_struct * excitatory_population_params = new lif_spiking_neuron_parameters_struct();
-  excitatory_population_params->group_shape[0] = 27;
-  excitatory_population_params->group_shape[1] = 27;
+  excitatory_population_params->group_shape[0] = x_dim;
+  excitatory_population_params->group_shape[1] = y_dim;
   excitatory_population_params->resting_potential_v0 = -0.074f;
   excitatory_population_params->threshold_for_action_potential_spike = -0.053f;
   excitatory_population_params->somatic_capacitance_Cm = 500.0*pow(10, -12);
@@ -122,10 +126,7 @@ int main (int argc, char *argv[]){
   input_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   input_to_excitatory_parameters->delay_range[0] = 10.0*timestep;   //Delays range from 1 to 10 ms for excitatory connectivity
   input_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
-  input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
-  input_to_excitatory_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
-  input_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
-  input_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
+  input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ONE_TO_ONE;
 
   // *** Add plasticity to input synapses
   input_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
@@ -161,8 +162,8 @@ int main (int argc, char *argv[]){
   excitatory_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
   excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   excitatory_to_excitatory_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
-  excitatory_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
-  excitatory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
+  excitatory_to_excitatory_parameters->max_number_of_connections_per_pair = 4;
+  excitatory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 30;
 
   // Creating a set of synapse parameters for connections from the excitatory neurons *in a lower layer to the layer above*
   conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
@@ -173,7 +174,7 @@ int main (int argc, char *argv[]){
   lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
   lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   lower_to_upper_parameters->gaussian_synapses_standard_deviation = 2.0; //connects neurons with specified Gaussian SD
-  lower_to_upper_parameters->max_number_of_connections_per_pair = 5;
+  lower_to_upper_parameters->max_number_of_connections_per_pair = 30;
   lower_to_upper_parameters->gaussian_synapses_per_postsynaptic_neuron = 4;
 
 
@@ -206,10 +207,51 @@ int main (int argc, char *argv[]){
       ADD INPUT STIMULI TO THE PATTERNED POISSON NEURONS CLASS
   */
 
-  //Initialize array for background inputs; note that althought it is a 2D input in the model, this is represented in Spike as a 1D array, n*n long
-  int total_input_size = (27*27);
-  float background_rates[total_input_size];
-  
+  //Initialize array for input firing rates; note that althought it is a 2D input in the model, this is represented in Spike as a 1D array, n*n long
+  int total_input_size = (x_dim * y_dim * num_images);
+  std::vector<double> input_rates(total_input_size);
+
+
+  // *** CHECK if it is more efficient to load firing rates when they are needed, or to load them all in one large chuck to begin with 
+
+  std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
+  std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
+
+  //Load binary file containing firing rates
+  ifstream firing_rates_file;
+  firing_rates_file.open("sub_file.gbo", ios::binary);
+  if (firing_rates_file.is_open()){ //checks the binary fire successfully opened
+    std::cout << "Firing rates file opened, extracting rates...\n";
+
+    // *** 'float' types are typically 8 bytes in Python (such as in the input file), but only 4 in C++; thus begin by taking in the values using 'double' type
+    firing_rates_file.seekg(0, std::ios::end);
+    int num_elements = firing_rates_file.tellg() / sizeof(double);
+    firing_rates_file.seekg(0, std::ios::beg);
+
+    firing_rates_file.read(reinterpret_cast<char*>(&input_rates[0]), num_elements*sizeof(double));
+
+  }
+  else{
+    std::cout << "Error: Issue opening file containing input firing rates\n";
+  }
+
+  firing_rates_file.close(); //closes file when input firing rates have been successfully copied
+
+
+  std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
+  std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
+
+
+  //Invert firing rate values (i.e. 0's and 1's), and multiply by baseline firing rate
+  for (int ii = 0; ii < total_input_size; ++ii){
+    input_rates[ii] = ((input_rates[ii] - 1) * -1) * baseline_firing_rate;
+  }
+
+  std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
+  std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
+
+
+  /*
   //Loop over background inputs to set all values to a homogenous background rate
   for (int ii = 0; ii < total_input_size; ii++){
         background_rates[ii] = 5.0f;  
@@ -217,24 +259,17 @@ int main (int argc, char *argv[]){
 
   //std::array<float, {27, 27}> s1_poisson_rates = backround_rates;
   //std::array<float, {27, 27}> s2_poisson_rates = backround_rates;
-
-  int first_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
-  int second_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
-
-  /*
-  // First stimulus is the 'ascending' pattern; pattern takes place over 10 ms.
-  float s1_poisson_rates[27] = {10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 15.0f, 10.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f};
-  // Adding this stimulus to the input neurons
-  int first_stimulus = patterned_poisson_input_neurons->add_stimulus(s1_poisson_rates, 27);
-  // Creating a second stimulus (descending pattern)
- float s2_poisson_rates[27] = {2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 2.0f, 10.0f, 10.0f, 10.0f, 10.0f, 10.0f, 15.0f, 15.0f, 15.0f, 15.0f};
-  int second_stimulus = patterned_poisson_input_neurons->add_stimulus(s2_poisson_rates, 27);
   */
+
+  //int first_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
+  //int second_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
+
 
   /*
       RUN THE SIMULATION
   */
   
+  /*
   // The only argument to run is the number of seconds
   ExampleModel->finalise_model();
   float simtime = 0.05f; //This should be long enough to allow any recursive signalling to finish propagating
@@ -264,6 +299,7 @@ int main (int argc, char *argv[]){
   spike_monitor_input->save_spikes_as_binary("./", "input_spikes"); //Save the input neurons spiking activity
 
   //ExampleModel->spiking_synapses->save_connectivity_as_txt("./");
+  */
 
   return 0;
 }

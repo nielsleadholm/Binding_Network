@@ -209,10 +209,11 @@ int main (int argc, char *argv[]){
 
   //Initialize array for input firing rates; note that althought it is a 2D input in the model, this is represented in Spike as a 1D array, n*n long
   int total_input_size = (x_dim * y_dim * num_images);
-  std::vector<double> input_rates(total_input_size);
+  std::vector<float> input_rates(total_input_size);
 
 
   // *** CHECK if it is more efficient to load firing rates when they are needed, or to load them all in one large chuck to begin with 
+
 
   std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
   std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
@@ -223,12 +224,13 @@ int main (int argc, char *argv[]){
   if (firing_rates_file.is_open()){ //checks the binary fire successfully opened
     std::cout << "Firing rates file opened, extracting rates...\n";
 
-    // *** 'float' types are typically 8 bytes in Python (such as in the input file), but only 4 in C++; thus begin by taking in the values using 'double' type
     firing_rates_file.seekg(0, std::ios::end);
-    int num_elements = firing_rates_file.tellg() / sizeof(double);
+    int num_elements = firing_rates_file.tellg() / sizeof(float); //tellg will return the total number of bytes (indicated by the final read position in the file, which was obtained by seekg and ::end in the line above)
+    assert(num_elements == total_input_size); //Check the size of the number of firing rates in the input file is as expected
     firing_rates_file.seekg(0, std::ios::beg);
 
-    firing_rates_file.read(reinterpret_cast<char*>(&input_rates[0]), num_elements*sizeof(double));
+    firing_rates_file.read(reinterpret_cast<char*>(&input_rates[0]), num_elements*sizeof(float)); //char types are a single byte in C++, so the char pointer is a way of...
+    // enforcing C++ to read the file byte-by-byte; this does not however change the type of e..g input_rates from whatever it was initialized to before
 
   }
   else{
@@ -244,22 +246,20 @@ int main (int argc, char *argv[]){
 
   //Invert firing rate values (i.e. 0's and 1's), and multiply by baseline firing rate
   for (int ii = 0; ii < total_input_size; ++ii){
-    input_rates[ii] = ((input_rates[ii] - 1) * -1) * baseline_firing_rate;
+    input_rates[ii] = (input_rates[ii] - 1.25) * -1) * baseline_firing_rate; //Results in a stimuli firing rate that is 1.25*baseline, and a background firing rate that is 0.25*baseline
   }
+
+  //Check input rates have been changed from double to float type. 
+  assert(sizeof input_rates[0] == 4);
 
   std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
   std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
 
 
-  /*
-  //Loop over background inputs to set all values to a homogenous background rate
-  for (int ii = 0; ii < total_input_size; ii++){
-        background_rates[ii] = 5.0f;  
-  }
 
-  //std::array<float, {27, 27}> s1_poisson_rates = backround_rates;
-  //std::array<float, {27, 27}> s2_poisson_rates = backround_rates;
-  */
+
+
+
 
   //int first_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
   //int second_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);

@@ -238,6 +238,8 @@ int main (int argc, char *argv[]){
   firing_rates_file.close(); //closes file when input firing rates have been successfully copied
 
 
+  //Uncomment the following section to test that firing rates for each stimulus have maintained their 2D structure
+  /*
   //Test that the firing rates have maintained their correct x-y structure by printing to screen
   for (int ii = 0; ii < num_images; ++ii){
     //Iterate through each row
@@ -248,8 +250,9 @@ int main (int argc, char *argv[]){
       }
       std::cout << "\n";
     }
-    std::cout << "\n\n\n\n*** Stimulus " << ii << "***\n\n";
+    std::cout << "\n\n\n\n*** Stimulus " << (ii+1) << "***\n\n";
   }
+  */
 
 
   //Invert firing rate values (i.e. 0's and 1's) so that stimuli are the active neurons, and multiply by baseline firing rate
@@ -278,7 +281,7 @@ int main (int argc, char *argv[]){
   /*
       RUN THE SIMULATION
   */
-  /*
+
   // The only argument to run is the number of seconds
   ExampleModel->finalise_model();
   float simtime = 0.05f; //This should be long enough to allow any recursive signalling to finish propagating
@@ -299,7 +302,7 @@ int main (int argc, char *argv[]){
   spike_monitor_input->save_spikes_as_binary("./", "input_spikes"); //Save the input neurons spiking activity
 
   //ExampleModel->spiking_synapses->save_connectivity_as_txt("./");
-  */
+  
 
   return 0;
 }

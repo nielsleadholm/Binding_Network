@@ -212,11 +212,9 @@ int main (int argc, char *argv[]){
   std::vector<float> input_rates(total_input_size);
 
 
-  // *** CHECK if it is more efficient to load firing rates when they are needed, or to load them all in one large chuck to begin with 
+  // *** CHECK if it is more efficient to load firing rates when they are needed, or to load them all in one large chunck to begin with 
 
 
-  std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
-  std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
 
   //Load binary file containing firing rates
   ifstream firing_rates_file;
@@ -240,56 +238,58 @@ int main (int argc, char *argv[]){
   firing_rates_file.close(); //closes file when input firing rates have been successfully copied
 
 
-  std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
-  std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
-
-
-  //Invert firing rate values (i.e. 0's and 1's), and multiply by baseline firing rate
-  for (int ii = 0; ii < total_input_size; ++ii){
-    input_rates[ii] = (input_rates[ii] - 1.25) * -1) * baseline_firing_rate; //Results in a stimuli firing rate that is 1.25*baseline, and a background firing rate that is 0.25*baseline
+  //Test that the firing rates have maintained their correct x-y structure by printing to screen
+  for (int ii = 0; ii < num_images; ++ii){
+    //Iterate through each row
+    for (int jj = 0; jj < y_dim; ++jj){
+      //Iterate through each column in a row
+      for (int kk = 0; kk < x_dim; ++kk){
+        std::cout << input_rates[(ii * x_dim * y_dim) + jj*32 + kk];
+      }
+      std::cout << "\n";
+    }
+    std::cout << "\n\n\n\n*** Stimulus " << ii << "***\n\n";
   }
 
-  //Check input rates have been changed from double to float type. 
-  assert(sizeof input_rates[0] == 4);
 
-  std::cout << "Element of the firing rate array is " << input_rates[9] << "\n";
-  std::cout << "Element of the firing rate array is " << input_rates[4095] << "\n";
-
-
+  //Invert firing rate values (i.e. 0's and 1's) so that stimuli are the active neurons, and multiply by baseline firing rate
+  for (int ii = 0; ii < total_input_size; ++ii){
+    input_rates[ii] = ((input_rates[ii] - 1.25) * -1) * baseline_firing_rate; //Results in a stimuli firing rate that is 1.25*baseline, and a background firing rate that is 0.25*baseline
+  }
 
 
+  /*** Assign firing rates to stimuli ***/
 
+  //Initialize an array of integers to hold the stimulus ID values
+  int stimuli_array[num_images];
+  //Initialize a temporary array for holding stimulus firing rates
+  float temp_stimulus_array[x_dim*y_dim]; //
 
-
-  //int first_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
-  //int second_stimulus = patterned_poisson_input_neurons->add_stimulus(background_rates, total_input_size);
+  //Iterate through each image
+  for (int ii = 0; ii < num_images; ++ii){
+    //Iterate through each image's firing rates and assign to a temporary array
+    for (int jj = 0; jj < (x_dim*y_dim); jj++){
+      temp_stimulus_array[jj] = input_rates[(ii * x_dim * y_dim) + jj];
+    }
+    stimuli_array[ii] = patterned_poisson_input_neurons->add_stimulus(temp_stimulus_array, x_dim*y_dim);
+  }
 
 
   /*
       RUN THE SIMULATION
   */
-  
   /*
   // The only argument to run is the number of seconds
   ExampleModel->finalise_model();
   float simtime = 0.05f; //This should be long enough to allow any recursive signalling to finish propagating
 
-  // Very first 'loop' is executed outside, such that stimulus_onset_adjustment is incremented appropriately, without repeating a logical operator
-  patterned_poisson_input_neurons->select_stimulus(first_stimulus);
-  ExampleModel->run(simtime);
-
-  // Loop through a series of stimulus presentations, alternating the chosen stimulus in each example; note due to the above, loop begins at 1
-  for (int ii = 1; ii < 10; ++ii) {
-    ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
-    //On even loops, present stimulus 1
-    if (ii%2 == 0) {
-      //NB stimulus adjusment is not relevant for Poisson input: patterned_poisson_input_neurons->stimulus_onset_adjustment += simtime;
-      patterned_poisson_input_neurons->select_stimulus(first_stimulus);
-      ExampleModel->run(simtime);
-    }
-    else {
-      //patterned_poisson_input_neurons->stimulus_onset_adjustment += simtime; //simtime ensures the stimulus begins at the start of the new simulation run, rather than e.g. not running because the spike times for each neuron are in the past
-      patterned_poisson_input_neurons->select_stimulus(second_stimulus);
+  // Loop through a certain number of epoch's of presentation
+  for (int ii = 0; ii < 5; ++ii) {
+    // Within each epoch, loop through each stimulus 
+    //*** Eventually this order should probably be randomized ***
+    for (int jj = 0; jj < num_images; ++jj){
+      ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+      patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
       ExampleModel->run(simtime);
     }
 

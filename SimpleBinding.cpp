@@ -117,8 +117,7 @@ int main (int argc, char *argv[]){
   int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
   int third_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
   int third_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
-  int fourth_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
-  int fourth_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+
 
   // SETTING UP SYNAPSES
   // Creating a synapses parameter structure for connections from the input neurons to the excitatory neurons
@@ -201,7 +200,7 @@ int main (int argc, char *argv[]){
   ExampleModel->AddSynapseGroup(first_inhibitory_neuron_layer_ID, first_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
   ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, first_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
-  // *** Add synapses relevant to the second, third, and fourth layers
+  // *** Add synapses relevant to the additional layers
   ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
   ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
   ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
@@ -212,10 +211,6 @@ int main (int argc, char *argv[]){
   ExampleModel->AddSynapseGroup(third_inhibitory_neuron_layer_ID, third_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
   ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
-  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, fourth_excitatory_neuron_layer_ID, lower_to_upper_parameters);
-  ExampleModel->AddSynapseGroup(fourth_excitatory_neuron_layer_ID, fourth_excitatory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
-  ExampleModel->AddSynapseGroup(fourth_excitatory_neuron_layer_ID, fourth_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
-  ExampleModel->AddSynapseGroup(fourth_excitatory_neuron_layer_ID, fourth_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
   /*
       ADD INPUT STIMULI TO THE PATTERNED POISSON NEURONS CLASS
@@ -249,7 +244,7 @@ int main (int argc, char *argv[]){
 
 
   //Uncomment the following section to test that firing rates for each stimulus have maintained their 2D structure
-  
+  /*
   //Test that the firing rates have maintained their correct x-y structure by printing to screen
   for (int ii = 0; ii < num_images; ++ii){
     std::cout << "\n\n\n\n*** Stimulus " << (ii+1) << "***\n\n";
@@ -263,6 +258,7 @@ int main (int argc, char *argv[]){
     }
 
   }
+  */
   
 
 
@@ -290,27 +286,68 @@ int main (int argc, char *argv[]){
 
 
   /*
-      RUN THE SIMULATION
+      RUN THE SIMULATION BEFORE TRAINING
   */
 
-  // The only argument to run is the number of seconds
   ExampleModel->finalise_model();
-  float simtime = 0.05f; //This should be long enough to allow any recursive signalling to finish propagating
+  float simtime = 0.2f; //This should be long enough to allow any recursive signalling to finish propagating
 
   // Loop through a certain number of epoch's of presentation
-  for (int ii = 0; ii < 5; ++ii) {
+  for (int ii = 0; ii < 3; ++ii) {
     // Within each epoch, loop through each stimulus 
     //*** Eventually this order should probably be randomized ***
     for (int jj = 0; jj < num_images; ++jj){
       ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
       patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
-      ExampleModel->run(simtime);
+      ExampleModel->run(simtime, 0); //the second argument ensures STDP is on or off
     }
 
   }
 
-  spike_monitor_main->save_spikes_as_binary("./", "main_spikes");
-  spike_monitor_input->save_spikes_as_binary("./", "input_spikes"); //Save the input neurons spiking activity
+  spike_monitor_main->save_spikes_as_binary("./", "output_spikes_pretraining");
+
+  /*
+      RUN THE SIMULATION WITH TRAINING
+  */
+
+  // Loop through a certain number of epoch's of presentation
+  for (int ii = 0; ii < 1000; ++ii) {
+    // Within each epoch, loop through each stimulus 
+    //*** Eventually this order should probably be randomized ***
+    for (int jj = 0; jj < num_images; ++jj){
+      ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+      patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
+      ExampleModel->run(simtime, 1); //the second argument ensures STDP is on or off
+    }
+
+  }
+
+
+  spike_monitor_main->reset_state(); //Dumps all recorded spikes
+  ExampleModel->reset_time(); //Resets the internal clock to 0
+
+  /*
+      RUN THE SIMULATION AFTER TRAINING
+  */
+
+  // Loop through a certain number of epoch's of presentation
+  for (int ii = 0; ii < 3; ++ii) {
+    // Within each epoch, loop through each stimulus 
+    //*** Eventually this order should probably be randomized ***
+    for (int jj = 0; jj < num_images; ++jj){
+      ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+      patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
+      ExampleModel->run(simtime, 0); //the second argument ensures STDP is on or off
+    }
+
+  }
+
+
+  spike_monitor_main->save_spikes_as_binary("./", "output_spikes_posttraining");
+
+
+
+  //spike_monitor_input->save_spikes_as_binary("./", "input_spikes"); //Save the input neurons spiking activity
 
   //ExampleModel->spiking_synapses->save_connectivity_as_txt("./");
   

@@ -24,7 +24,7 @@ int main (int argc, char *argv[]){
   int x_dim = 32;
   int y_dim = 32;
   int num_images = 2; 
-  int baseline_firing_rate = 15;
+  int baseline_firing_rate = 10;
   // Set up the simulator with a timestep at which the neuron, synapse and STDP properties will be calculated 
   float timestep = 0.0001;  // In seconds
   ExampleModel->SetTimestep(timestep);
@@ -49,21 +49,21 @@ int main (int argc, char *argv[]){
   ExampleModel->spiking_synapses = conductance_spiking_synapses;
 
   // *** Allocate chosen plasticity rule
-  weightdependent_stdp_plasticity_parameters_struct * WDSTDP_PARAMS = new weightdependent_stdp_plasticity_parameters_struct;
-  WDSTDP_PARAMS->a_plus = 1.0;
-  WDSTDP_PARAMS->a_minus = 1.0;
-  WDSTDP_PARAMS->tau_plus = 0.005;
-  WDSTDP_PARAMS->tau_minus = 0.005;
-  WDSTDP_PARAMS->lambda = 1.0f*powf(10.0, -2);
-  WDSTDP_PARAMS->alpha = 2.02;
-  WDSTDP_PARAMS->w_max = 0.3*powf(10.0, -3);
+  // weightdependent_stdp_plasticity_parameters_struct * WDSTDP_PARAMS = new weightdependent_stdp_plasticity_parameters_struct;
+  // WDSTDP_PARAMS->a_plus = 1.0;
+  // WDSTDP_PARAMS->a_minus = 1.0;
+  // WDSTDP_PARAMS->tau_plus = 0.02;
+  // WDSTDP_PARAMS->tau_minus = 0.02;
+  // WDSTDP_PARAMS->lambda = 1.0f*powf(10.0, -2);
+  // WDSTDP_PARAMS->alpha = 2.02;
+  // WDSTDP_PARAMS->w_max = 0.6; //w_max determines the maximum value the weight variable can take during learning
 
-  WeightDependentSTDPPlasticity * weightdependent_stdp = new WeightDependentSTDPPlasticity((SpikingSynapses *) conductance_spiking_synapses, (SpikingNeurons *) lif_spiking_neurons, (SpikingNeurons *) patterned_poisson_input_neurons, (stdp_plasticity_parameters_struct *) WDSTDP_PARAMS);  
+  // WeightDependentSTDPPlasticity * weightdependent_stdp = new WeightDependentSTDPPlasticity((SpikingSynapses *) conductance_spiking_synapses, (SpikingNeurons *) lif_spiking_neurons, (SpikingNeurons *) patterned_poisson_input_neurons, (stdp_plasticity_parameters_struct *) WDSTDP_PARAMS);  
   
-  ExampleModel->AddPlasticityRule(weightdependent_stdp);
+  // ExampleModel->AddPlasticityRule(weightdependent_stdp);
 
   /*
-      ADD ANY ACTIVITY MONITORS OR PLASTICITY RULES YOU WISH 
+      ADD ANY ACTIVITY MONITORS
   */
   SpikingActivityMonitor* spike_monitor_main = new SpikingActivityMonitor(lif_spiking_neurons);
   ExampleModel->AddActivityMonitor(spike_monitor_main);
@@ -113,31 +113,35 @@ int main (int argc, char *argv[]){
   int first_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
   // *** Create additional layers - NB that is shares the same properties as the first layer
-  int second_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
-  int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
-  int third_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
-  int third_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+  // int second_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  // int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+  // int third_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  // int third_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
 
   // SETTING UP SYNAPSES
   // Creating a synapses parameter structure for connections from the input neurons to the excitatory neurons
   conductance_spiking_synapse_parameters_struct* input_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
-  input_to_excitatory_parameters->weight_range[0] = 0.5f;   // Create uniform distributions of weights [0.5, 10.0]
-  input_to_excitatory_parameters->weight_range[1] = 10.0f;
+  input_to_excitatory_parameters->weight_range[0] = 0.1f;   // Create uniform distributions of weights between the upper and lower bound
+  input_to_excitatory_parameters->weight_range[1] = 0.2f; //NB the weight range is simply the initialization
   input_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
-  input_to_excitatory_parameters->delay_range[0] = 10.0*timestep;   //Delays range from 1 to 10 ms for excitatory connectivity
+  input_to_excitatory_parameters->delay_range[0] = 10.0*timestep;
   input_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
   input_to_excitatory_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
-  input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ONE_TO_ONE;
+  // input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ONE_TO_ONE;
+  input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  input_to_excitatory_parameters->gaussian_synapses_standard_deviation = 5.0; //connects neurons with specified Gaussian SD
+  input_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
+  input_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 10;
 
   // *** Add plasticity to input synapses
-  input_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
+  // input_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
 
 
   // Creating a set of synapse parameters for connections from the excitatory neurons to the inhibitory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * excitatory_to_inhibitory_parameters = new conductance_spiking_synapse_parameters_struct();
-  excitatory_to_inhibitory_parameters->weight_range[0] = 10.0f;
-  excitatory_to_inhibitory_parameters->weight_range[1] = 10.0f;
+  excitatory_to_inhibitory_parameters->weight_range[0] = 0.1f;
+  excitatory_to_inhibitory_parameters->weight_range[1] = 0.2f;
   excitatory_to_inhibitory_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_inhibitory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
   excitatory_to_inhibitory_parameters->delay_range[1] = 20.0*timestep;
@@ -145,12 +149,12 @@ int main (int argc, char *argv[]){
   excitatory_to_inhibitory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   excitatory_to_inhibitory_parameters->gaussian_synapses_standard_deviation = 5.0; //connects neurons with specified Gaussian SD
   excitatory_to_inhibitory_parameters->max_number_of_connections_per_pair = 5;
-  excitatory_to_inhibitory_parameters->gaussian_synapses_per_postsynaptic_neuron = 50;
+  excitatory_to_inhibitory_parameters->gaussian_synapses_per_postsynaptic_neuron = 10;
 
   // Creating a set of synapse parameters from the inhibitory neurons to the excitatory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * inhibitory_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
-  inhibitory_to_excitatory_parameters->weight_range[0] = -5.0f;
-  inhibitory_to_excitatory_parameters->weight_range[1] = -2.5f;
+  inhibitory_to_excitatory_parameters->weight_range[0] = -0.4f;
+  inhibitory_to_excitatory_parameters->weight_range[1] = -0.2f;
   inhibitory_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   inhibitory_to_excitatory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
   inhibitory_to_excitatory_parameters->delay_range[1] = 20.0*timestep;
@@ -158,38 +162,38 @@ int main (int argc, char *argv[]){
   inhibitory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   inhibitory_to_excitatory_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
   inhibitory_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
-  inhibitory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 50;
+  inhibitory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 10;
   
   // Creating a set of synapse parameters for connections from the excitatory neurons back to the excitatory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * excitatory_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
-  excitatory_to_excitatory_parameters->weight_range[0] = 10.0f;
-  excitatory_to_excitatory_parameters->weight_range[1] = 10.0f;
-  excitatory_to_excitatory_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
+  excitatory_to_excitatory_parameters->weight_range[0] = 0.01f;
+  excitatory_to_excitatory_parameters->weight_range[1] = 0.05f;
+  excitatory_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_excitatory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
   excitatory_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
   excitatory_to_excitatory_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
   excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   excitatory_to_excitatory_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
   excitatory_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
-  excitatory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 50;
+  excitatory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 10;
 
   // Creating a set of synapse parameters for connections from the excitatory neurons *in a lower layer to the layer above*
-  conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
-  lower_to_upper_parameters->weight_range[0] = 10.0f;
-  lower_to_upper_parameters->weight_range[1] = 10.0f;
-  lower_to_upper_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
-  lower_to_upper_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
-  lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
-  lower_to_upper_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
-  lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
-  lower_to_upper_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
-  lower_to_upper_parameters->max_number_of_connections_per_pair = 5;
-  lower_to_upper_parameters->gaussian_synapses_per_postsynaptic_neuron = 50;
+  // conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
+  // lower_to_upper_parameters->weight_range[0] = 0.0f;
+  // lower_to_upper_parameters->weight_range[1] = 0.5f;
+  // lower_to_upper_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
+  // lower_to_upper_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
+  // lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
+  // lower_to_upper_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
+  // lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  // lower_to_upper_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
+  // lower_to_upper_parameters->max_number_of_connections_per_pair = 5;
+  // lower_to_upper_parameters->gaussian_synapses_per_postsynaptic_neuron = 50;
 
 
   // *** Add plasticity to excitatory to excitatory synapses (w/in layers), and the excitatory connections projecting up layers
-  excitatory_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
-  lower_to_upper_parameters->plasticity_vec.push_back(weightdependent_stdp);
+  // excitatory_to_excitatory_parameters->plasticity_vec.push_back(weightdependent_stdp);
+  // lower_to_upper_parameters->plasticity_vec.push_back(weightdependent_stdp);
 
 
   // CREATING SYNAPSES
@@ -201,15 +205,15 @@ int main (int argc, char *argv[]){
   ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, first_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
   // *** Add synapses relevant to the additional layers
-  ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
-  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
-  ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
-  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+  // ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
+  // ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  // ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  // ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
-  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, lower_to_upper_parameters);
-  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
-  ExampleModel->AddSynapseGroup(third_inhibitory_neuron_layer_ID, third_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
-  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+  // ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, lower_to_upper_parameters);
+  // ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  // ExampleModel->AddSynapseGroup(third_inhibitory_neuron_layer_ID, third_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  // ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
 
   /*
@@ -244,7 +248,7 @@ int main (int argc, char *argv[]){
 
 
   //Uncomment the following section to test that firing rates for each stimulus have maintained their 2D structure
-  /*
+  
   //Test that the firing rates have maintained their correct x-y structure by printing to screen
   for (int ii = 0; ii < num_images; ++ii){
     std::cout << "\n\n\n\n*** Stimulus " << (ii+1) << "***\n\n";
@@ -256,9 +260,8 @@ int main (int argc, char *argv[]){
       }
       std::cout << "\n";
     }
-
   }
-  */
+  
   
 
 
@@ -285,72 +288,91 @@ int main (int argc, char *argv[]){
   }
 
 
+  ExampleModel->finalise_model();
+  float simtime = 1.0f; //This should be long enough to allow any recursive signalling to finish propagating
+
   /*
       RUN THE SIMULATION BEFORE TRAINING
   */
 
-  ExampleModel->finalise_model();
-  float simtime = 0.2f; //This should be long enough to allow any recursive signalling to finish propagating
+  // // Loop through a certain number of epoch's of presentation
+  // for (int ii = 0; ii < 20; ++ii) {
+  //   // Within each epoch, loop through each stimulus 
+  //   //*** Eventually this order should probably be randomized ***
+  //   for (int jj = 0; jj < num_images; ++jj){
+  //     ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+  //     patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
+  //     ExampleModel->run(simtime, 0); //the second argument ensures STDP is on or off
+  //   }
 
-  // Loop through a certain number of epoch's of presentation
-  for (int ii = 0; ii < 3; ++ii) {
-    // Within each epoch, loop through each stimulus 
-    //*** Eventually this order should probably be randomized ***
-    for (int jj = 0; jj < num_images; ++jj){
-      ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
-      patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
-      ExampleModel->run(simtime, 0); //the second argument ensures STDP is on or off
-    }
+  // }
 
-  }
-
-  spike_monitor_main->save_spikes_as_binary("./", "output_spikes_pretraining");
+  //spike_monitor_main->save_spikes_as_txt("./", "output_spikes_pretraining");
 
   /*
       RUN THE SIMULATION WITH TRAINING
   */
 
   // Loop through a certain number of epoch's of presentation
-  for (int ii = 0; ii < 1000; ++ii) {
-    // Within each epoch, loop through each stimulus 
-    //*** Eventually this order should probably be randomized ***
-    for (int jj = 0; jj < num_images; ++jj){
-      ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
-      patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
-      ExampleModel->run(simtime, 1); //the second argument ensures STDP is on or off
-    }
+  // for (int ii = 0; ii < 10; ++ii) {
+  //   // Within each epoch, loop through each stimulus 
+  //   //*** Eventually this order should probably be randomized ***
+  //   for (int jj = 0; jj < num_images; ++jj){
+  //     ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+  //     patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
+  //     ExampleModel->run(simtime, 1); //the second argument ensures STDP is on or off
+  //   }
 
-  }
+  // }
 
 
-  spike_monitor_main->reset_state(); //Dumps all recorded spikes
-  ExampleModel->reset_time(); //Resets the internal clock to 0
+  // spike_monitor_main->reset_state(); //Dumps all recorded spikes
+  // // spike_monitor_input->reset_state();
+  // ExampleModel->reset_time(); //Resets the internal clock to 0
 
   /*
-      RUN THE SIMULATION AFTER TRAINING
+      RUN THE SIMULATION AFTER TRAINING WITH FIRST STIMULUS
   */
 
   // Loop through a certain number of epoch's of presentation
-  for (int ii = 0; ii < 3; ++ii) {
-    // Within each epoch, loop through each stimulus 
-    //*** Eventually this order should probably be randomized ***
-    for (int jj = 0; jj < num_images; ++jj){
-      ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
-      patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
-      ExampleModel->run(simtime, 0); //the second argument ensures STDP is on or off
-    }
+  for (int ii = 0; ii < 2; ++ii) {
+
+    ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+    patterned_poisson_input_neurons->select_stimulus(stimuli_array[0]);
+    ExampleModel->run(simtime, 0); //the second argument determines if STDP is on or off
 
   }
 
-
-  spike_monitor_main->save_spikes_as_binary("./", "output_spikes_posttraining");
-
-
-
-  //spike_monitor_input->save_spikes_as_binary("./", "input_spikes"); //Save the input neurons spiking activity
-
-  //ExampleModel->spiking_synapses->save_connectivity_as_txt("./");
+  spike_monitor_main->save_spikes_as_binary("./", "output_spikes_posttraining_stim1");
+  spike_monitor_main->save_spikes_as_txt("./", "output_spikes_posttraining_stim1");
   
+  spike_monitor_input->save_spikes_as_binary("./", "input_Poisson_stim1");
+
+
+  spike_monitor_main->reset_state(); //Dumps all recorded spikes
+  spike_monitor_input->reset_state();
+  ExampleModel->reset_time(); //Resets the internal clock to 0
+
+  /*
+      RUN THE SIMULATION AFTER TRAINING WITH SECOND STIMULUS
+  */
+
+  // Loop through a certain number of epoch's of presentation
+  for (int ii = 0; ii < 2; ++ii) {
+
+    ExampleModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+    patterned_poisson_input_neurons->select_stimulus(stimuli_array[1]);
+    ExampleModel->run(simtime, 0); //the second argument determines if STDP is on or off
+
+  }
+
+  spike_monitor_main->save_spikes_as_binary("./", "output_spikes_posttraining_stim2");
+  spike_monitor_main->save_spikes_as_txt("./", "output_spikes_posttraining_stim2");
+
+  spike_monitor_input->save_spikes_as_binary("./", "input_Poisson_stim2");
+  ExampleModel->spiking_synapses->save_weights_as_binary("./", "Sandbox_Network");
+  ExampleModel->spiking_synapses->save_connectivity_as_binary("./", "Sandbox_Network");
+
 
   return 0;
 }

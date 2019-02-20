@@ -113,10 +113,10 @@ int main (int argc, char *argv[]){
   int first_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
   // *** Create additional layers - NB that is shares the same properties as the first layer
-  // int second_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
-  // int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
-  // int third_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
-  // int third_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+  int second_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  int second_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
+  int third_excitatory_neuron_layer_ID = ExampleModel->AddNeuronGroup(excitatory_population_params);
+  int third_inhibitory_neuron_layer_ID = ExampleModel->AddNeuronGroup(inhibitory_population_params);
 
 
   // SETTING UP SYNAPSES
@@ -127,7 +127,7 @@ int main (int argc, char *argv[]){
   input_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   input_to_excitatory_parameters->delay_range[0] = 10.0*timestep;
   input_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
-  input_to_excitatory_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
+  input_to_excitatory_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
   // input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_ONE_TO_ONE;
   input_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   input_to_excitatory_parameters->gaussian_synapses_standard_deviation = 5.0; //connects neurons with specified Gaussian SD
@@ -145,7 +145,7 @@ int main (int argc, char *argv[]){
   excitatory_to_inhibitory_parameters->weight_scaling_constant = inhibitory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_inhibitory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
   excitatory_to_inhibitory_parameters->delay_range[1] = 20.0*timestep;
-  excitatory_to_inhibitory_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
+  excitatory_to_inhibitory_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
   excitatory_to_inhibitory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   excitatory_to_inhibitory_parameters->gaussian_synapses_standard_deviation = 5.0; //connects neurons with specified Gaussian SD
   excitatory_to_inhibitory_parameters->max_number_of_connections_per_pair = 5;
@@ -158,7 +158,7 @@ int main (int argc, char *argv[]){
   inhibitory_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   inhibitory_to_excitatory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
   inhibitory_to_excitatory_parameters->delay_range[1] = 20.0*timestep;
-  inhibitory_to_excitatory_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
+  inhibitory_to_excitatory_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
   inhibitory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   inhibitory_to_excitatory_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
   inhibitory_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
@@ -166,29 +166,29 @@ int main (int argc, char *argv[]){
   
   // Creating a set of synapse parameters for connections from the excitatory neurons back to the excitatory neurons *within a layer*
   conductance_spiking_synapse_parameters_struct * excitatory_to_excitatory_parameters = new conductance_spiking_synapse_parameters_struct();
-  excitatory_to_excitatory_parameters->weight_range[0] = 0.01f;
-  excitatory_to_excitatory_parameters->weight_range[1] = 0.05f;
+  excitatory_to_excitatory_parameters->weight_range[0] = 0.02f;
+  excitatory_to_excitatory_parameters->weight_range[1] = 0.04f;
   excitatory_to_excitatory_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   excitatory_to_excitatory_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
   excitatory_to_excitatory_parameters->delay_range[1] = 100.0*timestep;
-  excitatory_to_excitatory_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
+  excitatory_to_excitatory_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
   excitatory_to_excitatory_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
   excitatory_to_excitatory_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
   excitatory_to_excitatory_parameters->max_number_of_connections_per_pair = 5;
   excitatory_to_excitatory_parameters->gaussian_synapses_per_postsynaptic_neuron = 10;
 
   // Creating a set of synapse parameters for connections from the excitatory neurons *in a lower layer to the layer above*
-  // conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
-  // lower_to_upper_parameters->weight_range[0] = 0.0f;
-  // lower_to_upper_parameters->weight_range[1] = 0.5f;
-  // lower_to_upper_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
-  // lower_to_upper_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
-  // lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
-  // lower_to_upper_parameters->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
-  // lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
-  // lower_to_upper_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
-  // lower_to_upper_parameters->max_number_of_connections_per_pair = 5;
-  // lower_to_upper_parameters->gaussian_synapses_per_postsynaptic_neuron = 50;
+  conductance_spiking_synapse_parameters_struct * lower_to_upper_parameters = new conductance_spiking_synapse_parameters_struct();
+  lower_to_upper_parameters->weight_range[0] = 0.1f;
+  lower_to_upper_parameters->weight_range[1] = 0.2f;
+  lower_to_upper_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
+  lower_to_upper_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 10 ms for excitatory connectivity
+  lower_to_upper_parameters->delay_range[1] = 100.0*timestep;
+  lower_to_upper_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
+  lower_to_upper_parameters->connectivity_type = CONNECTIVITY_TYPE_GAUSSIAN_SAMPLE;
+  lower_to_upper_parameters->gaussian_synapses_standard_deviation = 1.0; //connects neurons with specified Gaussian SD
+  lower_to_upper_parameters->max_number_of_connections_per_pair = 5;
+  lower_to_upper_parameters->gaussian_synapses_per_postsynaptic_neuron = 10;
 
 
   // *** Add plasticity to excitatory to excitatory synapses (w/in layers), and the excitatory connections projecting up layers
@@ -205,15 +205,15 @@ int main (int argc, char *argv[]){
   ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, first_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
   // *** Add synapses relevant to the additional layers
-  // ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
-  // ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
-  // ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
-  // ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(first_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, lower_to_upper_parameters);
+  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  ExampleModel->AddSynapseGroup(second_inhibitory_neuron_layer_ID, second_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, second_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
-  // ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, lower_to_upper_parameters);
-  // ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
-  // ExampleModel->AddSynapseGroup(third_inhibitory_neuron_layer_ID, third_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
-  // ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(second_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, lower_to_upper_parameters);
+  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_inhibitory_neuron_layer_ID, excitatory_to_inhibitory_parameters);
+  ExampleModel->AddSynapseGroup(third_inhibitory_neuron_layer_ID, third_excitatory_neuron_layer_ID, inhibitory_to_excitatory_parameters);
+  ExampleModel->AddSynapseGroup(third_excitatory_neuron_layer_ID, third_excitatory_neuron_layer_ID, excitatory_to_excitatory_parameters);
 
 
   /*

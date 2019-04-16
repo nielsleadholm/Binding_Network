@@ -1,6 +1,6 @@
-# Binding_Network
+# PolyNetwork_Simulations
 
-C++ code for creating a simple, hierarchical polychronous neural network to investigate the emergence of feature binding. 
+C++ code for creating and simulating polychronous neural networks. 
 
 This code is based on the SPIKE! (https://github.com/OFTNAI/Spike) simulator for spiking neural networks. 
 

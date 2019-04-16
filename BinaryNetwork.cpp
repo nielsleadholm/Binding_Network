@@ -137,8 +137,8 @@ int main (int argc, char *argv[]){
   excitatory_population_params->somatic_capacitance_Cm = 200.0*pow(10, -12);
   excitatory_population_params->somatic_leakage_conductance_g0 = 10.0*pow(10, -9);
 
-  std::cout << "New layer ID is " << neuron_params_vec[0][0] << "\n";
-  std::cout << "New layer ID is " << neuron_params_vec[0][1] << "\n";
+  //std::cout << "New layer ID is " << neuron_params_vec[0][0] << "\n";
+  //std::cout << "New layer ID is " << neuron_params_vec[0][1] << "\n";
 
   // Iteratively create all the additional layers of excitatory neurons, storing their IDs in a 2D vector-of-a-vector
   // Note the input neurons are the 0th layer, specified earlier
@@ -148,12 +148,14 @@ int main (int argc, char *argv[]){
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer
       //Add an element to the inner vector, and assign the desired value
       neuron_params_vec[ii].push_back(BinaryModel->AddNeuronGroup(excitatory_population_params));
-      std::cout << "New layer ID is " << neuron_params_vec[ii][jj] << "\n";
+      //std::cout << "New layer ID is " << neuron_params_vec[ii][jj] << "\n";
     }
   }
 
 
   // SETTING UP SYNAPSES
+
+  std::cout << "\n\n.......\nBuilding feed-forward connectivity...\n.......\n\n";
 
   // FEED-FORWARD CONNECTIONS
   // Create vector-of-a-vector-of-a-vector to store the synapse structure for feed-forward connections
@@ -199,13 +201,14 @@ int main (int argc, char *argv[]){
   for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
       for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-          std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
-          std::cout << "File being called is " << ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
+          //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
+          //std::cout << "File being called is " << ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
           connect_from_python(neuron_params_vec[ii][jj],
           neuron_params_vec[ii+1][kk],
           ff_synapse_params_vec[ii][jj][kk],
           ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"),
           BinaryModel);
+          //std::cout << "The number of synapses is " << ff_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic.size() << "\n";
       }
     }
   }
@@ -224,7 +227,7 @@ int main (int argc, char *argv[]){
   //   }
   // }
 
-  std::cout << "\n\n.......\nNow doing lateral connectivity...\n.......\n\n";
+  std::cout << "\n\n.......\nBuilding lateral connectivity...\n.......\n\n";
 
   // LATERAL CONNECTIONS
   // Create vector-of-a-vector-of-a-vector to store the synapse structure for lateral connections
@@ -260,7 +263,7 @@ int main (int argc, char *argv[]){
       lat_synapse_params_vec[ii].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
       for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer receiving the connections
         lat_synapse_params_vec[ii][jj].push_back(new conductance_spiking_synapse_parameters_struct());
-        std::cout << "Additional lateral layer synapse is " << ii << jj << kk << "\n";
+        //std::cout << "Additional lateral layer synapse is " << ii << jj << kk << "\n";
         std::memcpy(lat_synapse_params_vec[ii][jj][kk], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0])); //Note all the ff synapses share the same base properties
       }
     }
@@ -270,129 +273,86 @@ int main (int argc, char *argv[]){
   for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
       for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-          std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
-          std::cout << "File being called is " << ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
+          //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
+          //std::cout << "File being called is " << ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
           connect_from_python(neuron_params_vec[ii+1][jj], //Note the input layer is skipped due to the addition of 1
           neuron_params_vec[ii+1][kk],
           lat_synapse_params_vec[ii][jj][kk], //lat_synapse_params_vec[ii][jj][kk], //note synapse vector is indexed with ii, not ii+1
           ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"),
           BinaryModel);
+          //std::cout << "The number of synapses is " << lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic.size() << "\n";
       }
     }
   }
 
-  //Check all connectivity data has been assigned ot parameter structures as expected by printing to screen
+  // //Check all connectivity data has been assigned ot parameter structures as expected by printing to screen
+  // for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
+  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
+  //         for (int ll = 100; ll < 105; ll++){
+  //           printf("Pre ID %d, post ID %d, weight %f, delay %f\n", lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic[ll],
+  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_postsynaptic[ll],
+  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_weight[ll],
+  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_delay[ll]);
+  //       }
+  //     }
+  //   }
+  // }
+
+  // INHIBITORY CONNECTIONS
+  conductance_spiking_synapse_parameters_struct * non_Dale_inhibition_ipsilateral_parameters = new conductance_spiking_synapse_parameters_struct();
+  non_Dale_inhibition_ipsilateral_parameters->weight_range[0] = upper_weight_limit * exc_inh_weight_ratio;
+  non_Dale_inhibition_ipsilateral_parameters->weight_range[1] = lower_weight_limit * exc_inh_weight_ratio;
+  // *** NB the inhibitory weights must be positive if the reversal potential is set appropriately (e.g. negative 80mv)
+  non_Dale_inhibition_ipsilateral_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
+  non_Dale_inhibition_ipsilateral_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
+  non_Dale_inhibition_ipsilateral_parameters->delay_range[1] = 10.0*timestep;
+  non_Dale_inhibition_ipsilateral_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
+  non_Dale_inhibition_ipsilateral_parameters->reversal_potential_Vhat = -80.0*pow(10.0, -3);
+  non_Dale_inhibition_ipsilateral_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
+  non_Dale_inhibition_ipsilateral_parameters->random_connectivity_probability = (1 - competitive_connection_prob);
+
+  conductance_spiking_synapse_parameters_struct * non_Dale_inhibition_contralateral_parameters = new conductance_spiking_synapse_parameters_struct();
+  std::memcpy(non_Dale_inhibition_contralateral_parameters, non_Dale_inhibition_ipsilateral_parameters, sizeof(* non_Dale_inhibition_ipsilateral_parameters));
+  non_Dale_inhibition_contralateral_parameters->random_connectivity_probability = competitive_connection_prob;
+
+  // Iteratively create the inhibitory synapses
   for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
       for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-          for (int ll = 100; ll < 105; ll++){
-            printf("Pre ID %d, post ID %d, weight %f, delay %f\n", lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic[ll],
-              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_postsynaptic[ll],
-              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_weight[ll],
-              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_delay[ll]);
-        }
+          if (jj==kk){
+            BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], non_Dale_inhibition_ipsilateral_parameters);
+            //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with ipsilateral probability\n";
+          }
+          else{
+            BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], non_Dale_inhibition_contralateral_parameters);  
+            //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with contralateral probability\n";
+          }
       }
     }
   }
 
-  // //Iterate through each layer's excitatory connections between layers
 
-  // connect_from_python(first_excitatory_left_neuron_layer_ID,
-  // first_excitatory_left_neuron_layer_ID,
-  // excitatory_to_excitatory_ipsilateral_parameters,
-  // "Connectivity_Data_Excit_Excit_Ipsi.syn",
-  // BinaryModel);
+  // BACKGROUND CONNECTIONS
+  //Create synapses for the background noise input to all other neurons
+  conductance_spiking_synapse_parameters_struct * back_input_to_all = new conductance_spiking_synapse_parameters_struct();
+  back_input_to_all->weight_range[0] = lower_weight_limit;   // Create uniform distributions of weights between the upper and lower bound
+  back_input_to_all->weight_range[1] = upper_weight_limit; //NB the weight range is simply the initialization
+  back_input_to_all->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
+  back_input_to_all->delay_range[0] = 10.0*timestep;
+  back_input_to_all->delay_range[1] = 100.0*timestep;
+  back_input_to_all->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
+  back_input_to_all->reversal_potential_Vhat = 0.0*pow(10.0, -3);
+  back_input_to_all->connectivity_type = CONNECTIVITY_TYPE_ALL_TO_ALL;
 
-  // // Check successful loading by printing to screen:
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the pre-synapse member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_presynaptic.size() << "\n";
-  // std::cout << "\nSample of pre-synapse IDs: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << input_to_ipsilateral_parameters->pairwise_connect_presynaptic[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the post-synapse member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_postsynaptic.size() << "\n";
-  // std::cout << "\nSample of post-synapse IDs: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << input_to_ipsilateral_parameters->pairwise_connect_postsynaptic[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the weights member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_weight.size() << "\n";
-  // std::cout << "\nSample of weights: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << input_to_ipsilateral_parameters->pairwise_connect_weight[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the delays member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_delay.size() << "\n";
-  // std::cout << "\nSample of delays: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << input_to_ipsilateral_parameters->pairwise_connect_delay[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the pre-synapse member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_presynaptic.size() << "\n";
-  // std::cout << "\nSample of pre-synapse IDs: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << excitatory_to_excitatory_ipsilateral_parameters->pairwise_connect_presynaptic[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the post-synapse member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_postsynaptic.size() << "\n";
-  // std::cout << "\nSample of post-synapse IDs: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << excitatory_to_excitatory_ipsilateral_parameters->pairwise_connect_postsynaptic[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the weights member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_weight.size() << "\n";
-  // std::cout << "\nSample of weights: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << excitatory_to_excitatory_ipsilateral_parameters->pairwise_connect_weight[ii] << " ";
-  // }
-
-  // //Test that the data has been loaded as expected
-  // std::cout << "\nCalling the delays member after file-closing, the number of synapses is " << input_to_ipsilateral_parameters->pairwise_connect_delay.size() << "\n";
-  // std::cout << "\nSample of delays: \n";
-  // for (int ii = 1000; ii < 1005; ++ii){
-  //     std::cout << excitatory_to_excitatory_ipsilateral_parameters->pairwise_connect_delay[ii] << " ";
-  // }
-
-  // std::cout << "\nThe weight-scaling constant for the input-to-excitatory synapses is " << input_to_ipsilateral_parameters->weight_scaling_constant;
-  // std::cout << "\nThe weight-scaling constant for the excitatory-to-excitatory synapses is " << excitatory_to_excitatory_ipsilateral_parameters->weight_scaling_constant;
-
-
-  // //Create synapses for the background noise input to all other neurons
-  // conductance_spiking_synapse_parameters_struct * back_input_to_all = new conductance_spiking_synapse_parameters_struct();
-  // back_input_to_all->weight_range[0] = lower_weight_limit;   // Create uniform distributions of weights between the upper and lower bound
-  // back_input_to_all->weight_range[1] = upper_weight_limit; //NB the weight range is simply the initialization
-  // back_input_to_all->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
-  // back_input_to_all->delay_range[0] = 10.0*timestep;
-  // back_input_to_all->delay_range[1] = 100.0*timestep;
-  // back_input_to_all->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
-  // back_input_to_all->reversal_potential_Vhat = 0.0*pow(10.0, -3);
-  // // std::memcpy(back_input_to_all, input_to_ipsilateral_parameters, sizeof(* input_to_ipsilateral_parameters));
-  // back_input_to_all->connectivity_type = CONNECTIVITY_TYPE_ALL_TO_ALL;
-
-
-  // // CREATING SYNAPSES
-  // // When creating synapses, the ids of the presynaptic and postsynaptic populations are all that are required
-  // // Note: Input neuron populations cannot be post-synaptic on any synapse
-
-  // // *** FIRST LAYER SYNAPSES ***
-  // // Input (from input neurons)
-  // // BinaryModel->AddSynapseGroup(input_left_layer_ID, first_excitatory_left_neuron_layer_ID, input_to_ipsilateral_parameters);
-  // // // BinaryModel->AddSynapseGroup(input_left_layer_ID, first_excitatory_right_neuron_layer_ID, input_to_contralateral_parameters);
-  // // // BinaryModel->AddSynapseGroup(input_right_layer_ID, first_excitatory_left_neuron_layer_ID, input_to_contralateral_parameters);
-  // // BinaryModel->AddSynapseGroup(input_right_layer_ID, first_excitatory_right_neuron_layer_ID, input_to_ipsilateral_parameters);
-
-  // // *** BACKGROUND NOISE SYNAPSES
-  // //Create synapses between the background neurons and all others
-  // BinaryModel->AddSynapseGroup(back_input_layer_ID, first_excitatory_left_neuron_layer_ID, back_input_to_all);
-  // BinaryModel->AddSynapseGroup(back_input_layer_ID, first_excitatory_right_neuron_layer_ID, back_input_to_all);
+  // Iteratively create the background input synapses
+  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer
+      //Note the first (input) layers are skipped, and each side of each layer only needs to receive one connection
+      BinaryModel->AddSynapseGroup(back_input_layer_ID, neuron_params_vec[ii+1][jj], back_input_to_all);
+      std::cout << "\n\nBackground input neurons are sending to group ID " << neuron_params_vec[ii+1][jj] << "\n";
+    }
+  }
 
 
   // /*

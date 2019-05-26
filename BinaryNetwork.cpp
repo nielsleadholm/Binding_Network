@@ -37,20 +37,21 @@ int main (int argc, char *argv[]){
   */
 
   //Simulation parameters; these can be relatively easily adjusted to observe the affect on the network
-  int training_epochs = 5; // Number of epochs to have STDP active
-  int display_epochs = 5; // Number of epochs where the each stimulus is presented with STDP inactive
-  float exc_inh_weight_ratio = 2.0; //parameter that determines how much stronger inhibitory synapses are than excitatory synapses
-  int background_firing_rate = 50; //approximate firing rate of noisy neurons feeding into all layers, and preventing dead neurons
+  int training_epochs = 1; // Number of epochs to have STDP active
+  int display_epochs = 50; // Number of epochs where the each stimulus is presented with STDP inactive
+  float exc_inh_weight_ratio = 5.0; //parameter that determines how much stronger inhibitory synapses are than excitatory synapses
+  int background_firing_rate = 500; //approximate firing rate of noisy neurons feeding into all layers, and preventing dead neurons
   
   // Initialize core model parameters
   int x_dim = 5;
   int y_dim = 5;
   int num_images = 2; 
-  int input_firing_rate = 20; //approximate firing rate of input stimuli; note multiplier used later to generate actual stimuli
-  float competitive_connection_prob = 0.75; // Probability parameter that controls how the two competing halves of the network are connected
+  int input_firing_rate = 50; //approximate firing rate of input stimuli; note multiplier used later to generate actual stimuli
+  float competitive_connection_prob = 0.99; // Probability parameter that controls how the two competing halves of the network are connected
   float timestep = 0.0001;  // In seconds
-  float lower_weight_limit = 0.01;
-  float upper_weight_limit = 0.1;
+  float lower_weight_limit = 0.005;
+  float upper_weight_limit = 0.015; //For initiliazing weights
+  float max_weight_parameter = 0.03; //Maximum value that can be learned
   BinaryModel->SetTimestep(timestep);
 
   // Choose an input neuron type
@@ -67,8 +68,10 @@ int main (int argc, char *argv[]){
 
   // *** Allocate chosen plasticity rule
   custom_stdp_plasticity_parameters_struct * Excit_STDP_PARAMS = new custom_stdp_plasticity_parameters_struct;
-  Excit_STDP_PARAMS->a_plus = (upper_weight_limit + lower_weight_limit)/2; //Set to the mean of the excitatory weight distribution
+  Excit_STDP_PARAMS->a_plus = 1.0f; //Set to the mean of the excitatory weight distribution
   Excit_STDP_PARAMS->a_minus = 1.0f;
+  Excit_STDP_PARAMS->weight_dependence_power_ltd = 0.0f; //By setting this to 0, the STDP rule has *no* LTD weight dependence, and hence behaves like the classical Gerstner rule
+  Excit_STDP_PARAMS->w_max = max_weight_parameter; //Sets the maximum weight that can be *learned* (hard border)
   Excit_STDP_PARAMS->tau_plus = 0.01f;
   Excit_STDP_PARAMS->tau_minus = 0.01f;
   Excit_STDP_PARAMS->learning_rate = 0.001f;
@@ -167,6 +170,8 @@ int main (int argc, char *argv[]){
   ff_synapse_params_vec[0][0][0]->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
   ff_synapse_params_vec[0][0][0]->reversal_potential_Vhat = 0.0*pow(10.0, -3);
   ff_synapse_params_vec[0][0][0]->connectivity_type = CONNECTIVITY_TYPE_PAIRWISE;
+  ff_synapse_params_vec[0][0][0]->plasticity_vec.push_back(excitatory_stdp);
+
 
   // Create the right hand projections of the above
   ff_synapse_params_vec[0][0].push_back(new conductance_spiking_synapse_parameters_struct());
@@ -221,122 +226,122 @@ int main (int argc, char *argv[]){
   //   }
   // }
 
-  std::cout << "\n\n.......\nBuilding lateral connectivity...\n.......\n\n";
-
 
 
 
   // LATERAL CONNECTIONS
   
+  std::cout << "\n\n.......\nBuilding lateral connectivity...\n.......\n\n";
 
   // *** inbuilt Spike method - limited to one synapse and therefore one delay per conneciton ***
 
+  // conductance_spiking_synapse_parameters_struct * lateral_excitation_ipsilateral_parameters = new conductance_spiking_synapse_parameters_struct();
+  // lateral_excitation_ipsilateral_parameters->weight_range[0] = lower_weight_limit; 
+  // lateral_excitation_ipsilateral_parameters->weight_range[1] = upper_weight_limit;
+  // lateral_excitation_ipsilateral_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
+  // lateral_excitation_ipsilateral_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
+  // lateral_excitation_ipsilateral_parameters->delay_range[1] = 100.0*timestep;
+  // lateral_excitation_ipsilateral_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
+  // lateral_excitation_ipsilateral_parameters->reversal_potential_Vhat = 0.0*pow(10.0, -3);
+  // lateral_excitation_ipsilateral_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
+  // lateral_excitation_ipsilateral_parameters->random_connectivity_probability = competitive_connection_prob;
+  // lateral_excitation_ipsilateral_parameters->plasticity_vec.push_back(excitatory_stdp);
 
-  conductance_spiking_synapse_parameters_struct * lateral_excitation_ipsilateral_parameters = new conductance_spiking_synapse_parameters_struct();
-  lateral_excitation_ipsilateral_parameters->weight_range[0] = lower_weight_limit; 
-  lateral_excitation_ipsilateral_parameters->weight_range[1] = upper_weight_limit;
-  lateral_excitation_ipsilateral_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
-  lateral_excitation_ipsilateral_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
-  lateral_excitation_ipsilateral_parameters->delay_range[1] = 100.0*timestep;
-  lateral_excitation_ipsilateral_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
-  lateral_excitation_ipsilateral_parameters->reversal_potential_Vhat = 0.0*pow(10.0, -3);
-  lateral_excitation_ipsilateral_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  lateral_excitation_ipsilateral_parameters->random_connectivity_probability = competitive_connection_prob;
+  // conductance_spiking_synapse_parameters_struct * lateral_excitation_contralateral_parameters = new conductance_spiking_synapse_parameters_struct();
+  // std::memcpy(lateral_excitation_contralateral_parameters, lateral_excitation_ipsilateral_parameters, sizeof(* lateral_excitation_ipsilateral_parameters));
+  // lateral_excitation_contralateral_parameters->random_connectivity_probability = (1 - competitive_connection_prob);
 
-  conductance_spiking_synapse_parameters_struct * lateral_excitation_contralateral_parameters = new conductance_spiking_synapse_parameters_struct();
-  std::memcpy(lateral_excitation_contralateral_parameters, lateral_excitation_ipsilateral_parameters, sizeof(* lateral_excitation_ipsilateral_parameters));
-  lateral_excitation_contralateral_parameters->random_connectivity_probability = (1 - competitive_connection_prob);
+  // // Iteratively create the inhibitory synapses
+  // for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
+  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
+  //         if (jj==kk){
+  //           BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], lateral_excitation_ipsilateral_parameters);
+  //           //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with ipsilateral probability\n";
+  //         }
+  //         else{
+  //           BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], lateral_excitation_contralateral_parameters);  
+  //           //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with contralateral probability\n";
+  //         }
+  //     }
+  //   }
+  // }
 
-  // Iteratively create the inhibitory synapses
-  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+
+
+
+  // *** connectivity file loading method: enables multiple synpases per connection ***
+
+
+  // Create vector-of-a-vector-of-a-vector to store the synapse structure for lateral connections
+  // The first dimension corresponds to the layer, the second to the source side (left or right), and the receiving side (left or right)
+  std::vector<std::vector<std::vector<conductance_spiking_synapse_parameters_struct*>>> lat_synapse_params_vec;
+
+  //Create the lateral synapses from the first layer, for the left hand source, with left hand projections
+  lat_synapse_params_vec.push_back(std::vector<std::vector<conductance_spiking_synapse_parameters_struct*>>());
+  lat_synapse_params_vec[0].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
+  lat_synapse_params_vec[0][0].push_back(new conductance_spiking_synapse_parameters_struct());
+  lat_synapse_params_vec[0][0][0]->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
+  lat_synapse_params_vec[0][0][0]->delay_range[0] = 10.0*timestep;
+  lat_synapse_params_vec[0][0][0]->delay_range[1] = 10.0*timestep; //NB that as the delays will be set later from loaded files, these values are arbitrary, albeit required by Spike
+  lat_synapse_params_vec[0][0][0]->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
+  lat_synapse_params_vec[0][0][0]->reversal_potential_Vhat = 0.0*pow(10.0, -3);
+  lat_synapse_params_vec[0][0][0]->connectivity_type = CONNECTIVITY_TYPE_PAIRWISE;
+  lat_synapse_params_vec[0][0][0]->plasticity_vec.push_back(excitatory_stdp);
+
+  // Create the right hand projections of the above
+  lat_synapse_params_vec[0][0].push_back(new conductance_spiking_synapse_parameters_struct());
+  std::memcpy(lat_synapse_params_vec[0][0][1], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0]));
+
+  //Create the above two equivalents, but for the right hand  source
+  lat_synapse_params_vec[0].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
+  lat_synapse_params_vec[0][1].push_back(new conductance_spiking_synapse_parameters_struct());
+  std::memcpy(lat_synapse_params_vec[0][1][0], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0])); //Left hand projections
+  lat_synapse_params_vec[0][1].push_back(new conductance_spiking_synapse_parameters_struct());
+  std::memcpy(lat_synapse_params_vec[0][1][1], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0])); //Right hand projections
+
+  // Iteratively allocate the additional lateral synapses
+  for (int ii = 1; ii < 3; ii++){ //Note the first element (the first layer) has already been assigned above
+    lat_synapse_params_vec.push_back(std::vector<std::vector<conductance_spiking_synapse_parameters_struct*>>()); //Add element for next layer
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-          if (jj==kk){
-            BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], lateral_excitation_ipsilateral_parameters);
-            //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with ipsilateral probability\n";
-          }
-          else{
-            BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], lateral_excitation_contralateral_parameters);  
-            //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with contralateral probability\n";
-          }
+      lat_synapse_params_vec[ii].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
+      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer receiving the connections
+        lat_synapse_params_vec[ii][jj].push_back(new conductance_spiking_synapse_parameters_struct());
+        //std::cout << "Additional lateral layer synapse is " << ii << jj << kk << "\n";
+        std::memcpy(lat_synapse_params_vec[ii][jj][kk], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0]));
       }
     }
   }
 
+  // Iteratively load connectivity data
+  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
+      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
+          std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
+          std::cout << "File being called is " << ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
+          connect_from_python(neuron_params_vec[ii+1][jj], //Note the input layer is skipped due to the addition of 1
+          neuron_params_vec[ii+1][kk],
+          lat_synapse_params_vec[ii][jj][kk], //lat_synapse_params_vec[ii][jj][kk], //note synapse vector is indexed with ii, not ii+1
+          ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"),
+          BinaryModel);
+          std::cout << "The number of synapses is " << lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic.size() << "\n";
+      }
+    }
+  }
 
-
-
-  // *** connectivity file loading method: prevents the simulation from running ***
-
-
-  // // Create vector-of-a-vector-of-a-vector to store the synapse structure for lateral connections
-  // // The first dimension corresponds to the layer, the second to the source side (left or right), and the receiving side (left or right)
-  // std::vector<std::vector<std::vector<conductance_spiking_synapse_parameters_struct*>>> lat_synapse_params_vec;
-
-  // //Create the lateral synapses from the first layer, for the left hand source, with left hand projections
-  // lat_synapse_params_vec.push_back(std::vector<std::vector<conductance_spiking_synapse_parameters_struct*>>());
-  // lat_synapse_params_vec[0].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
-  // lat_synapse_params_vec[0][0].push_back(new conductance_spiking_synapse_parameters_struct());
-  // lat_synapse_params_vec[0][0][0]->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
-  // lat_synapse_params_vec[0][0][0]->delay_range[0] = 10.0*timestep;
-  // lat_synapse_params_vec[0][0][0]->delay_range[1] = 10.0*timestep; //NB that as the delays will be set later from loaded files, these values are arbitrary, albeit required by Spike
-  // lat_synapse_params_vec[0][0][0]->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
-  // lat_synapse_params_vec[0][0][0]->reversal_potential_Vhat = 0.0*pow(10.0, -3);
-  // lat_synapse_params_vec[0][0][0]->connectivity_type = CONNECTIVITY_TYPE_PAIRWISE;
-
-  // // Create the right hand projections of the above
-  // lat_synapse_params_vec[0][0].push_back(new conductance_spiking_synapse_parameters_struct());
-  // std::memcpy(lat_synapse_params_vec[0][0][1], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0]));
-
-  // //Create the above two equivalents, but for the right hand  source
-  // lat_synapse_params_vec[0].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
-  // lat_synapse_params_vec[0][1].push_back(new conductance_spiking_synapse_parameters_struct());
-  // std::memcpy(lat_synapse_params_vec[0][1][0], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0])); //Left hand projections
-  // lat_synapse_params_vec[0][1].push_back(new conductance_spiking_synapse_parameters_struct());
-  // std::memcpy(lat_synapse_params_vec[0][1][1], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0])); //Right hand projections
-
-  // // Iteratively allocate the additional lateral synapses
-  // for (int ii = 1; ii < 3; ii++){ //Note the first element (the first layer) has already been assigned above
-  //   lat_synapse_params_vec.push_back(std::vector<std::vector<conductance_spiking_synapse_parameters_struct*>>()); //Add element for next layer
-  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //     lat_synapse_params_vec[ii].push_back(std::vector<conductance_spiking_synapse_parameters_struct*>());
-  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer receiving the connections
-  //       lat_synapse_params_vec[ii][jj].push_back(new conductance_spiking_synapse_parameters_struct());
-  //       //std::cout << "Additional lateral layer synapse is " << ii << jj << kk << "\n";
-  //       std::memcpy(lat_synapse_params_vec[ii][jj][kk], lat_synapse_params_vec[0][0][0], sizeof(* lat_synapse_params_vec[0][0][0]));
-  //     }
-  //   }
-  // }
-
-  // // Iteratively load connectivity data
-  // for (int ii = 0; ii < 2; ii++){ // Iterate through the layers
-  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //         std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
-  //         std::cout << "File being called is " << ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
-  //         connect_from_python(neuron_params_vec[ii+1][jj], //Note the input layer is skipped due to the addition of 1
-  //         neuron_params_vec[ii+1][kk],
-  //         lat_synapse_params_vec[ii][jj][kk], //lat_synapse_params_vec[ii][jj][kk], //note synapse vector is indexed with ii, not ii+1
-  //         ("Connectivity_Data_lat_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"),
-  //         BinaryModel);
-  //         std::cout << "The number of synapses is " << lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic.size() << "\n";
-  //     }
-  //   }
-  // }
-
-  // //Check all connectivity data has been assigned ot parameter structures as expected by printing to screen
-  // for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
-  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //         for (int ll = 100; ll < 105; ll++){
-  //           printf("Pre ID %d, post ID %d, weight %f, delay %f\n", lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic[ll],
-  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_postsynaptic[ll],
-  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_weight[ll],
-  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_delay[ll]);
-  //       }
-  //     }
-  //   }
-  // }
+  //Check all connectivity data has been assigned ot parameter structures as expected by printing to screen
+  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
+      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
+          for (int ll = 100; ll < 105; ll++){
+            printf("Pre ID %d, post ID %d, weight %f, delay %f\n", lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic[ll],
+              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_postsynaptic[ll],
+              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_weight[ll],
+              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_delay[ll]);
+        }
+      }
+    }
+  }
 
   std::cout << "\n\n.......\nBuilding inhibitory and background connectivity...\n.......\n\n";
 
@@ -431,7 +436,7 @@ int main (int argc, char *argv[]){
 
   //Invert firing rate values (i.e. 0's and 1's) so that stimuli are the active neurons, and multiply by baseline firing rate
   for (int ii = 0; ii < total_input_size; ++ii){
-    input_rates[ii] = ((input_rates[ii] - 1.10) * -1) * input_firing_rate; //Results in a stimuli firing rate that is 1.10*baseline, and a background firing rate that is 0.1*baseline
+    input_rates[ii] = ((input_rates[ii] - 1.0001) * -1) * input_firing_rate; //Results in a stimuli firing rate that is 1.0001*baseline, and a background firing rate that is 0.0001*baseline
   }
 
 
@@ -474,7 +479,7 @@ int main (int argc, char *argv[]){
     for (int jj = 0; jj < num_images; ++jj){
       BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
       patterned_poisson_input_neurons->select_stimulus(stimuli_array[jj]);
-      BinaryModel->run(simtime, 0); //the second argument is a boolean determining if STDP is on or off
+      BinaryModel->run(simtime, 1); //the second argument is a boolean determining if STDP is on or off
     }
     //Save a snapshot of the model's current weights to enable looking for convergence 
     BinaryModel->spiking_synapses->save_weights_as_binary("./", "Epoch" + std::to_string(ii) + "Sandbox_Network");
@@ -493,7 +498,7 @@ int main (int argc, char *argv[]){
   // Loop through a certain number of epoch's of presentation
   for (int ii = 0; ii < display_epochs; ++ii) {
 
-    BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+    //BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
     patterned_poisson_input_neurons->select_stimulus(stimuli_array[0]);
     BinaryModel->run(simtime, 0); //the second argument is a boolean determining if STDP is on or off
 
@@ -508,6 +513,7 @@ int main (int argc, char *argv[]){
   spike_monitor_main->reset_state(); //Dumps all recorded spikes
   spike_monitor_input->reset_state();
   BinaryModel->reset_time(); //Resets the internal clock to 0
+  BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
 
   /*
       RUN THE SIMULATION AFTER TRAINING WITH SECOND STIMULUS
@@ -516,7 +522,7 @@ int main (int argc, char *argv[]){
   // Loop through a certain number of epoch's of presentation
   for (int ii = 0; ii < display_epochs; ++ii) {
 
-    BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+    //BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
     patterned_poisson_input_neurons->select_stimulus(stimuli_array[1]);
     BinaryModel->run(simtime, 0); 
 

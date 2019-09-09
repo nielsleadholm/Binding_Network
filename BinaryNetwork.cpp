@@ -37,8 +37,9 @@ int main (int argc, char *argv[]){
   */
 
   //Simulation parameters; these can be relatively easily adjusted to observe the affect on the network
-  int training_epochs = 1; // Number of epochs to have STDP active
-  int display_epochs = 50; // Number of epochs where the each stimulus is presented with STDP inactive
+  int training_epochs = 3; // Number of epochs to have STDP active
+  int display_epochs = 5; // Number of epochs where the each stimulus is presented with STDP inactive
+  int freeze_layer_STDP = 1; // Specify if STDP should be disabled in a given layer of the network
   float exc_inh_weight_ratio = 5.0; //parameter that determines how much stronger inhibitory synapses are than excitatory synapses
   int background_firing_rate = 500; //approximate firing rate of noisy neurons feeding into all layers, and preventing dead neurons
   
@@ -498,7 +499,7 @@ int main (int argc, char *argv[]){
   // Loop through a certain number of epoch's of presentation
   for (int ii = 0; ii < display_epochs; ++ii) {
 
-    //BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+    BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
     patterned_poisson_input_neurons->select_stimulus(stimuli_array[0]);
     BinaryModel->run(simtime, 0); //the second argument is a boolean determining if STDP is on or off
 
@@ -513,7 +514,6 @@ int main (int argc, char *argv[]){
   spike_monitor_main->reset_state(); //Dumps all recorded spikes
   spike_monitor_input->reset_state();
   BinaryModel->reset_time(); //Resets the internal clock to 0
-  BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
 
   /*
       RUN THE SIMULATION AFTER TRAINING WITH SECOND STIMULUS
@@ -522,7 +522,7 @@ int main (int argc, char *argv[]){
   // Loop through a certain number of epoch's of presentation
   for (int ii = 0; ii < display_epochs; ++ii) {
 
-    //BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
+    BinaryModel->reset_state(); //Re-set the activity of the network, but not e.g. weights and connectivity
     patterned_poisson_input_neurons->select_stimulus(stimuli_array[1]);
     BinaryModel->run(simtime, 0); 
 
@@ -534,6 +534,25 @@ int main (int argc, char *argv[]){
   spike_monitor_input->save_spikes_as_binary("./", "input_Poisson_stim2");
   BinaryModel->spiking_synapses->save_weights_as_binary("./", "Sandbox_Network");
   BinaryModel->spiking_synapses->save_connectivity_as_binary("./", "Sandbox_Network");
+
+  // Iteratively save the feed-forward connectivity data; this makes loading later easier
+  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
+      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
+          Synapses::save_connectivity_as_binary((std::"./output_weights_epoch"+std::to_string(training_epochs)), \
+            std::string prefix=("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"), int synapsegroupid=-1);
+
+          //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
+          //std::cout << "File being called is " << ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
+          connect_from_python(neuron_params_vec[ii][jj],
+          neuron_params_vec[ii+1][kk],
+          ff_synapse_params_vec[ii][jj][kk],
+          ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"),
+          BinaryModel);
+          //std::cout << "The number of synapses is " << ff_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic.size() << "\n";
+      }
+    }
+  }
 
 
   return 0;

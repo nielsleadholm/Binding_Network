@@ -6,25 +6,11 @@
 #include <string>
 
 
-// Network with 5x5 neurons in each layer
-// If unable to get interesting activity, then can make the most trivial case of literally two 
-// parallel networks with no interactivity (as a proxy for winner-take-all connectivity)
-// Inhibitory population is the same size as the excitatory population
-// Start actually with Gaussian connectivity and SOMO like architecture to see if possible
-// Can later use all-to-all connectivity if necessary-
-
-
-// Things to add:
-// Background neurons inputting to all layers to prevent dead neurons following plasticity changes
-// *** need to check in the future this isn't cause some odd correlated activity by each 
-// background neuron simultaneously activating neurons in multiple layers etc. ***
+// The following is a network with a 'binary' architecture, in that it consists of just two streams of multi-layered, side-by-side processing
+// The degree of interactivity between these two streams is determined by the user
 
 // The function which will autorun when the executable is created
 int main (int argc, char *argv[]){
-
-  /*
-      CHOOSE THE COMPONENTS OF YOUR SIMULATION
-  */
 
   // Create an instance of the Model
   SpikingModel* BinaryModel = new SpikingModel();
@@ -37,18 +23,17 @@ int main (int argc, char *argv[]){
   */
 
   //Simulation parameters; these can be relatively easily adjusted to observe the affect on the network
-  int training_epochs = 3; // Number of epochs to have STDP active
-  int display_epochs = 5; // Number of epochs where the each stimulus is presented with STDP inactive
-  int freeze_layer_STDP = 1; // Specify if STDP should be disabled in a given layer of the network
+  int training_epochs = 100; // Number of epochs to have STDP active
+  int display_epochs = 50; // Number of epochs where the each stimulus is presented with STDP inactive
   float exc_inh_weight_ratio = 5.0; //parameter that determines how much stronger inhibitory synapses are than excitatory synapses
-  int background_firing_rate = 500; //approximate firing rate of noisy neurons feeding into all layers, and preventing dead neurons
+  int background_firing_rate = 15000; //Poisson firing rate (Hz) of noisy neurons feeding into all layers, and preventing dead neurons
   
   // Initialize core model parameters
-  int x_dim = 5;
-  int y_dim = 5;
+  int x_dim = 16;
+  int y_dim = 16;
   int num_images = 2; 
-  int input_firing_rate = 50; //approximate firing rate of input stimuli; note multiplier used later to generate actual stimuli
-  float competitive_connection_prob = 0.99; // Probability parameter that controls how the two competing halves of the network are connected
+  int input_firing_rate = 30; //approximate firing rate of input stimuli; note multiplier used later to generate actual stimuli
+  float competitive_connection_prob = 0.2; // Probability parameter that controls how the two competing halves of the network are connected
   float timestep = 0.0001;  // In seconds
   float lower_weight_limit = 0.005;
   float upper_weight_limit = 0.015; //For initiliazing weights
@@ -87,9 +72,6 @@ int main (int argc, char *argv[]){
   */
   SpikingActivityMonitor* spike_monitor_main = new SpikingActivityMonitor(lif_spiking_neurons);
   BinaryModel->AddActivityMonitor(spike_monitor_main);
-  // Add activity monitor for poisson input neurons
-  SpikingActivityMonitor* spike_monitor_input = new SpikingActivityMonitor(patterned_poisson_input_neurons);
-  BinaryModel->AddActivityMonitor(spike_monitor_input);
 
 
   // SETTING UP INPUT NEURONS
@@ -115,15 +97,32 @@ int main (int argc, char *argv[]){
   neuron_params_0_1->group_shape[1] = y_dim;   // y-dimension of the input neuron layer
   neuron_params_vec[0].push_back(BinaryModel->AddInputNeuronGroup(neuron_params_0_1));
 
+  std::cout << "New input layer ID is " << neuron_params_vec[0][0] << "\n";
+  std::cout << "New input layer ID is " << neuron_params_vec[0][1] << "\n";
+
   // Set-up background noise neurons; these ensure no 'dead' neurons following plasticity by guarenteeing a random input to every neuron
+  // Multiple background 'layers' are created, to ensure that each neuron can receive it's own one-to-one input (i.e. background input is uncorrelated)
+  std::vector<std::vector<int>> background_params_vec;
+
+  // Note no layer of background neurons is needed for the input neurons, hence the first index of 0 is skipped
   patterned_poisson_input_spiking_neuron_parameters_struct* back_input_neuron_params = new patterned_poisson_input_spiking_neuron_parameters_struct();
   back_input_neuron_params->group_shape[0] = x_dim;    // x-dimension of the input neuron layer
   back_input_neuron_params->group_shape[1] = y_dim;   // y-dimension of the input neuron layer
-  int back_input_layer_ID = BinaryModel->AddInputNeuronGroup(back_input_neuron_params);
+
+  // Iteratively create all the layers of background neurons, storing their IDs in a 2D vector-of-a-vector
+  for (int ii = 0; ii < 3; ii++){
+    // As params_vec is a vector-of-a-vector without a defined size, need to add an element to the base vector
+    background_params_vec.push_back(std::vector<int>());
+    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer
+      //Add an element to the inner vector, and assign the desired value
+      background_params_vec[ii].push_back(BinaryModel->AddInputNeuronGroup(back_input_neuron_params));
+      std::cout << "New background layer ID is " << background_params_vec[ii][jj] << "\n";
+    }
+  }
 
   int total_number_of_input_neurons = (neuron_params_0_0->group_shape[0]*neuron_params_0_0->group_shape[1] 
     + neuron_params_0_1->group_shape[0]*neuron_params_0_1->group_shape[1] 
-    + back_input_neuron_params->group_shape[0]*back_input_neuron_params->group_shape[1]);
+    + back_input_neuron_params->group_shape[0]*back_input_neuron_params->group_shape[1]*2*3); //multiple by 2 for the two separate streams, and by 3 for each layer
 
   // SETTING UP NEURON GROUPS
   lif_spiking_neuron_parameters_struct * excitatory_population_params = new lif_spiking_neuron_parameters_struct();
@@ -135,9 +134,6 @@ int main (int argc, char *argv[]){
   excitatory_population_params->somatic_capacitance_Cm = 200.0*pow(10, -12);
   excitatory_population_params->somatic_leakage_conductance_g0 = 10.0*pow(10, -9);
 
-  std::cout << "New layer ID is " << neuron_params_vec[0][0] << "\n";
-  std::cout << "New layer ID is " << neuron_params_vec[0][1] << "\n";
-
   // Iteratively create all the additional layers of excitatory neurons, storing their IDs in a 2D vector-of-a-vector
   // Note the input neurons are the 0th layer, specified earlier
   for (int ii = 1; ii < 4; ii++){
@@ -146,7 +142,7 @@ int main (int argc, char *argv[]){
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer
       //Add an element to the inner vector, and assign the desired value
       neuron_params_vec[ii].push_back(BinaryModel->AddNeuronGroup(excitatory_population_params));
-      std::cout << "New layer ID is " << neuron_params_vec[ii][jj] << "\n";
+      std::cout << "New network layer ID is " << neuron_params_vec[ii][jj] << "\n";
     }
   }
 
@@ -330,7 +326,7 @@ int main (int argc, char *argv[]){
     }
   }
 
-  //Check all connectivity data has been assigned ot parameter structures as expected by printing to screen
+  //Check all connectivity data has been assigned to parameter structures as expected by printing to screen
   for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
       for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
@@ -357,11 +353,11 @@ int main (int argc, char *argv[]){
   non_Dale_inhibition_ipsilateral_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
   non_Dale_inhibition_ipsilateral_parameters->reversal_potential_Vhat = -80.0*pow(10.0, -3);
   non_Dale_inhibition_ipsilateral_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  non_Dale_inhibition_ipsilateral_parameters->random_connectivity_probability = (1 - competitive_connection_prob);
+  non_Dale_inhibition_ipsilateral_parameters->random_connectivity_probability = competitive_connection_prob; //(1 - competitive_connection_prob);
 
   conductance_spiking_synapse_parameters_struct * non_Dale_inhibition_contralateral_parameters = new conductance_spiking_synapse_parameters_struct();
   std::memcpy(non_Dale_inhibition_contralateral_parameters, non_Dale_inhibition_ipsilateral_parameters, sizeof(* non_Dale_inhibition_ipsilateral_parameters));
-  non_Dale_inhibition_contralateral_parameters->random_connectivity_probability = competitive_connection_prob;
+  non_Dale_inhibition_contralateral_parameters->random_connectivity_probability = (1 - competitive_connection_prob); //competitive_connection_prob;
 
   // Iteratively create the inhibitory synapses
   for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
@@ -387,17 +383,17 @@ int main (int argc, char *argv[]){
   back_input_to_all->weight_range[1] = upper_weight_limit; //NB the weight range is simply the initialization
   back_input_to_all->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
   back_input_to_all->delay_range[0] = 10.0*timestep;
-  back_input_to_all->delay_range[1] = 100.0*timestep;
-  back_input_to_all->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
+  back_input_to_all->delay_range[1] = 10.0*timestep;
+  back_input_to_all->decay_term_tau_g = 0.005f;  // Seconds (Conductance Parameter)
   back_input_to_all->reversal_potential_Vhat = 0.0*pow(10.0, -3);
-  back_input_to_all->connectivity_type = CONNECTIVITY_TYPE_ALL_TO_ALL;
+  back_input_to_all->connectivity_type = CONNECTIVITY_TYPE_ONE_TO_ONE;
 
   // Iteratively create the background input synapses
   for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
     for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer
       //Note the first (input) layers are skipped, and each side of each layer only needs to receive one connection
-      BinaryModel->AddSynapseGroup(back_input_layer_ID, neuron_params_vec[ii+1][jj], back_input_to_all);
-      //std::cout << "\n\nBackground input neurons are sending to group ID " << neuron_params_vec[ii+1][jj] << "\n";
+      BinaryModel->AddSynapseGroup(background_params_vec[ii][jj], neuron_params_vec[ii+1][jj], back_input_to_all);
+      std::cout << "\n\nBackground input neurons " << background_params_vec[ii][jj] << " are sending to group ID " << neuron_params_vec[ii+1][jj] << "\n";
     }
   }
 
@@ -487,9 +483,13 @@ int main (int argc, char *argv[]){
 
   }
 
+  //Store a file with the network's initial weights for later visualization, even if training isn't happening
+  if (training_epochs == 0) {
+    BinaryModel->spiking_synapses->save_weights_as_binary("./", "Epoch" + std::to_string(-1) + "Sandbox_Network");
+  }
+
 
   spike_monitor_main->reset_state(); //Dumps all recorded spikes
-  spike_monitor_input->reset_state();
   BinaryModel->reset_time(); //Resets the internal clock to 0
 
   /*
@@ -507,12 +507,8 @@ int main (int argc, char *argv[]){
 
   spike_monitor_main->save_spikes_as_binary("./", "output_spikes_posttraining_stim1");
   spike_monitor_main->save_spikes_as_txt("./", "output_spikes_posttraining_stim1");
-  
-  spike_monitor_input->save_spikes_as_binary("./", "input_Poisson_stim1");
-
 
   spike_monitor_main->reset_state(); //Dumps all recorded spikes
-  spike_monitor_input->reset_state();
   BinaryModel->reset_time(); //Resets the internal clock to 0
 
   /*
@@ -531,28 +527,8 @@ int main (int argc, char *argv[]){
   spike_monitor_main->save_spikes_as_binary("./", "output_spikes_posttraining_stim2");
   spike_monitor_main->save_spikes_as_txt("./", "output_spikes_posttraining_stim2");
 
-  spike_monitor_input->save_spikes_as_binary("./", "input_Poisson_stim2");
   BinaryModel->spiking_synapses->save_weights_as_binary("./", "Sandbox_Network");
   BinaryModel->spiking_synapses->save_connectivity_as_binary("./", "Sandbox_Network");
-
-  // Iteratively save the feed-forward connectivity data; this makes loading later easier
-  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
-    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-          Synapses::save_connectivity_as_binary((std::"./output_weights_epoch"+std::to_string(training_epochs)), \
-            std::string prefix=("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"), int synapsegroupid=-1);
-
-          //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << "\n";
-          //std::cout << "File being called is " << ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn") << "\n";
-          connect_from_python(neuron_params_vec[ii][jj],
-          neuron_params_vec[ii+1][kk],
-          ff_synapse_params_vec[ii][jj][kk],
-          ("Connectivity_Data_ff_" + std::to_string(ii) + std::to_string(jj) + std::to_string(kk) + ".syn"),
-          BinaryModel);
-          //std::cout << "The number of synapses is " << ff_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic.size() << "\n";
-      }
-    }
-  }
 
 
   return 0;

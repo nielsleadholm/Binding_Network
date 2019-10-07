@@ -209,7 +209,8 @@ int main (int argc, char *argv[]){
     }
   }
 
-  // //Check all connectivity data has been assigned to parameter structures as expected by printing to screen
+  // std::cout << "\n\nOutputting the assigned *feed-forward* connectivity data...\n";
+  // //User can manually check all connectivity data has been assigned to parameter structures as expected by printing to screen
   // for (int ii = 0; ii < 4; ii++){ // Iterate through the layers
   //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
   //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
@@ -229,46 +230,6 @@ int main (int argc, char *argv[]){
   // LATERAL CONNECTIONS
   
   std::cout << "\n\n.......\nBuilding lateral connectivity...\n.......\n\n";
-
-  // *** inbuilt Spike method - limited to one synapse and therefore one delay per conneciton ***
-
-  // conductance_spiking_synapse_parameters_struct * lateral_excitation_ipsilateral_parameters = new conductance_spiking_synapse_parameters_struct();
-  // lateral_excitation_ipsilateral_parameters->weight_range[0] = lower_weight_limit; 
-  // lateral_excitation_ipsilateral_parameters->weight_range[1] = upper_weight_limit;
-  // lateral_excitation_ipsilateral_parameters->weight_scaling_constant = excitatory_population_params->somatic_leakage_conductance_g0;
-  // lateral_excitation_ipsilateral_parameters->delay_range[0] = 10.0*timestep; //Delays range from 1 to 2 ms for inhibitory connectivity
-  // lateral_excitation_ipsilateral_parameters->delay_range[1] = 100.0*timestep;
-  // lateral_excitation_ipsilateral_parameters->decay_term_tau_g = 0.0017f;  // Seconds (Conductance Parameter)
-  // lateral_excitation_ipsilateral_parameters->reversal_potential_Vhat = 0.0*pow(10.0, -3);
-  // lateral_excitation_ipsilateral_parameters->connectivity_type = CONNECTIVITY_TYPE_RANDOM;
-  // lateral_excitation_ipsilateral_parameters->random_connectivity_probability = competitive_connection_prob;
-  // lateral_excitation_ipsilateral_parameters->plasticity_vec.push_back(excitatory_stdp);
-
-  // conductance_spiking_synapse_parameters_struct * lateral_excitation_contralateral_parameters = new conductance_spiking_synapse_parameters_struct();
-  // std::memcpy(lateral_excitation_contralateral_parameters, lateral_excitation_ipsilateral_parameters, sizeof(* lateral_excitation_ipsilateral_parameters));
-  // lateral_excitation_contralateral_parameters->random_connectivity_probability = (1 - competitive_connection_prob);
-
-  // // Iteratively create the inhibitory synapses
-  // for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
-  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-  //         if (jj==kk){
-  //           BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], lateral_excitation_ipsilateral_parameters);
-  //           //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with ipsilateral probability\n";
-  //         }
-  //         else{
-  //           BinaryModel->AddSynapseGroup(neuron_params_vec[ii+1][jj], neuron_params_vec[ii+1][kk], lateral_excitation_contralateral_parameters);  
-  //           //std::cout << "\n\nCurrent projecting group ID is " << neuron_params_vec[ii+1][jj] << ", sending to group ID " << neuron_params_vec[ii+1][kk] << ", with contralateral probability\n";
-  //         }
-  //     }
-  //   }
-  // }
-
-
-
-
-  // *** connectivity file loading method: enables multiple synpases per connection ***
-
 
   // Create vector-of-a-vector-of-a-vector to store the synapse structure for lateral connections
   // The first dimension corresponds to the layer, the second to the source side (left or right), and the receiving side (left or right)
@@ -326,19 +287,20 @@ int main (int argc, char *argv[]){
     }
   }
 
-  //Check all connectivity data has been assigned to parameter structures as expected by printing to screen
-  for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
-    for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
-      for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
-          for (int ll = 100; ll < 105; ll++){
-            printf("Pre ID %d, post ID %d, weight %f, delay %f\n", lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic[ll],
-              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_postsynaptic[ll],
-              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_weight[ll],
-              lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_delay[ll]);
-        }
-      }
-    }
-  }
+  // std::cout << "\n\nOutputting the assigned *lateral* connectivity data...\n";
+  // //User can manually check all connectivity data has been assigned to parameter structures as expected by printing to screen
+  // for (int ii = 0; ii < 3; ii++){ // Iterate through the layers
+  //   for (int jj = 0; jj < 2; jj++){ // Iterate through the left and right hand sides of each layer sending the connections
+  //     for (int kk = 0; kk < 2; kk++){ // Iterate through the left and right hand sides of each layer sending the connections
+  //         for (int ll = 100; ll < 105; ll++){
+  //           printf("Pre ID %d, post ID %d, weight %f, delay %f\n", lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_presynaptic[ll],
+  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_postsynaptic[ll],
+  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_weight[ll],
+  //             lat_synapse_params_vec[ii][jj][kk]->pairwise_connect_delay[ll]);
+  //       }
+  //     }
+  //   }
+  // }
 
   std::cout << "\n\n.......\nBuilding inhibitory and background connectivity...\n.......\n\n";
 
